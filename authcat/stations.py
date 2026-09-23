@@ -1,0 +1,106 @@
+
+def parse_station_coordinates(file_path):
+    station_coordinates = {}
+    with open(file_path, 'r') as file:
+        for line in file:
+            parts = line.strip().split()
+            station, latitude, longitude = parts[0], parts[1], parts[2]
+            station_coordinates[station] = (latitude, longitude)
+    return station_coordinates
+
+def parse_phase_arrivals_v2(file_path):
+    phase_arrivals = []
+    with open(file_path, 'r') as file:
+        in_phase_arrivals_section = False
+        for line in file:
+            if "Phase arrivals:" in line:
+                in_phase_arrivals_section = True
+            elif in_phase_arrivals_section and line.strip() == "":
+                in_phase_arrivals_section = False
+            elif in_phase_arrivals_section:
+                parts = line.strip().split(maxsplit=9)
+                if len(parts) == 10:
+                    station, phase = parts[0], parts[4]
+                    phase_arrivals.append({'station': station, 'phase': phase})
+    return phase_arrivals
+
+def count_phases(phase_arrivals):
+    phase_counts = {}
+    for arrival in phase_arrivals:
+        station, phase = arrival['station'], arrival['phase']
+        if station not in phase_counts:
+            phase_counts[station] = {'P': 0, 'S': 0}
+        if phase in ['P', 'S']:
+            phase_counts[station][phase] += 1
+    return phase_counts
+
+def write_output_file(counts, station_coordinates, output_file_path):
+    sorted_stations = sorted(counts.items(), key=lambda item: item[1]['P'], reverse=True)
+    
+    with open(output_file_path, 'w') as file:
+        for station, phases in sorted_stations:
+            if station in station_coordinates:
+                latitude, longitude = station_coordinates[station]
+                station_formatted = f"{station:5}"
+                p_phases_formatted = f"{phases['P']:5}"
+                s_phases_formatted = f"{phases['S']:5}"
+                file.write(f"{station_formatted} {latitude} {longitude} {p_phases_formatted} {s_phases_formatted}\n")
+            else:
+                print(f"Warning: Coordinates for station {station} not found.")
+
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import numpy as np
+import os
+
+def generate_stations_map(counts, station_coordinates, output_map_path):
+    p_phase_counts = [phases['P'] for phases in counts.values()]
+    threshold = np.percentile(p_phase_counts, 80)
+    
+    fig = plt.figure(figsize=(10, 5))
+    ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+    ax.add_feature(cfeature.COASTLINE.with_scale('10m'))
+    ax.add_feature(cfeature.BORDERS, linestyle=':')
+    
+    p_counts = np.array([phases['P'] for station, phases in counts.items() if phases['P'] >= threshold])
+    norm = plt.Normalize(vmin=p_counts.min(), vmax=p_counts.max())
+    cmap = plt.colormaps['viridis']
+    
+    for station, phases in counts.items():
+        if phases['P'] >= threshold and station in station_coordinates:
+            lat, lon = station_coordinates[station]
+            ax.scatter(float(lon), float(lat), s=100, c=cmap(norm(phases['P'])), marker='^', edgecolor='k', linewidth=0.5, transform=ccrs.Geodetic())
+            ax.text(float(lon), float(lat) + 0.03, station, transform=ccrs.Geodetic(), fontsize=6, ha='center', va='bottom')
+
+    plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, orientation='vertical', label='Number of P Phases')
+    plt.title('Seismic stations used')
+    plt.savefig(output_map_path, dpi=400)
+    plt.show()
+    print(f"Map of the seismic stations used is saved to Figures/Map_Stations.png")
+    print(f"List of the number of P- and S-phases recorded for each station is saved to Results/station_phases_counts.png")
+
+regd_sta_file_path = 'Input/regd.sta'
+input_folder = "Input"
+if os.path.isdir(input_folder):
+    print(f"{input_folder} folder:")
+    for filename in os.listdir(input_folder):
+        print(filename)
+else:
+    print(f"The folder {input_folder} does not exist.")
+
+file_path = input("Please provide the name of the earthquake bulletin: ")
+input_file_path = os.path.join(input_folder, file_path)    
+
+output_file_path = 'Results/station_phases_counts.txt'
+output_map_path = 'Figures/Map_Stations.png'
+
+os.makedirs('Figures', exist_ok=True)
+
+station_coordinates = parse_station_coordinates(regd_sta_file_path)
+phase_arrivals = parse_phase_arrivals_v2(input_file_path)
+counts = count_phases(phase_arrivals)
+
+write_output_file(counts, station_coordinates, output_file_path)
+
+generate_stations_map(counts, station_coordinates, output_map_path)
