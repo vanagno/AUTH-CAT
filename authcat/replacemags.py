@@ -38,7 +38,7 @@ def update_catalog_with_modified_magnitudes(catalog_path, modified_magnitudes_pa
             file.writelines(new_catalog)
 
         print("Catalog has been updated with modified magnitudes and saved to", output_path)
-        print ("You can now run transform.py if you prefer the 6-column format")
+#        print ("You can now run transform.py if you prefer the 6-column format")
     except Exception as e:
         print(f"Error processing the catalog file: {e}")
 
