@@ -2,10 +2,27 @@
 
 Writes either format:
 
-* ``hypodd``  
+* ``hypodd``  -- HypoDD/ph2dt phase input (``phase.dat``). Free-format ``#`` event
+  header plus fixed-column phase lines carrying **travel times** relative to the
+  origin, per the HypoDD v2.1 manual::
 
-* ``hypo71`` 
+      # YR MO DY HR MN SC LAT LON DEP MAG EH EZ RMS ID
+      STA        TT     WGHT  PHA
 
+* ``hypo71`` -- 
+
+Run with no ``--format`` at a terminal and the script asks which format(s) to
+write. With stdin piped, or with ``--format`` given, it does not ask -- so
+existing batch scripts keep working unchanged and get both formats, meaning
+``Results/phases.txt`` as before plus ``Results/phase.dat`` alongside it.
+
+Usage
+-----
+    python phases.py                                       # asks for both questions
+    python phases.py -i Input/Kef24.bul                    # asks for the format only
+    python phases.py -i Input/Kef24.bul -f both            # asks nothing
+    python phases.py -i Input/Kef24.bul -f both -d out      # both, elsewhere
+    python phases.py -i Input/Kef24.bul -f hypodd -o p.dat # one format, named
 
 
 """
@@ -30,10 +47,7 @@ __all__ = [
     "write_hypodd",
 ]
 
-# --------------------------------------------------------------------------- #
-# Target format:station left-justified in 8, travel time right-justified
-# ending at column 17, weight ending at column 25, phase label ending at 29.
-# --------------------------------------------------------------------------- #
+
 HYPODD_PHASE_FMT = "{sta:<8s}{tt:>9.3f}{wgt:>8.3f}{pha:>4s}"
 HYPODD_STA_WIDTH = 7  # HypoDD reads the station code as a7
 _HYPODD_HDR_RX = re.compile(
@@ -43,10 +57,7 @@ _HYPODD_HDR_RX = re.compile(
 )
 
 # --------------------------------------------------------------------------- #
-# Bulletin grammar. Patterns are anchored and accept a leading sign, which fixes
-# two defects in the original: bare ``'Date' in line`` matched any line containing
-# the word, and the unsigned ``\d+\.\d+`` coordinate patterns silently dropped
-# every event in the southern or western hemisphere.
+# Bulletin grammar. 
 # --------------------------------------------------------------------------- #
 _NUM = r"([-+]?\d+(?:\.\d+)?)"
 _ERR = r"(?:\s*(?:deg|km)?\s*(?:\+/-|±)\s*([\d.]+))?"
@@ -59,7 +70,8 @@ _BULLETIN_RX = {
     "rms": re.compile(rf"^\s*Residual RMS\s+{_NUM}"),
     "evid": re.compile(r"^\s*(?:Public ID|Event ID|Origin ID)\s+(\S+)"),
 }
-# Network magnitude lines, in preference order. 
+# Network magnitude lines, in preference order. The review flagged that the old
+# code took whichever magnitude line appeared last; here the first match wins.
 _MAG_RX = re.compile(rf"^\s*(MLh|ML|Mw|mb|Ms|M)\s+{_NUM}")
 _MAG_PRIORITY = ("MLh", "ML", "Mw", "mb", "Ms", "M")
 
@@ -99,7 +111,9 @@ class Event:
 
 @dataclass
 class WriteReport:
-    """Log rejections etc
+    """What was written and what was rejected.
+
+    Nothing is discarded silently: every counter here is reported by the CLI.
     """
 
     events_written: int = 0
@@ -109,6 +123,8 @@ class WriteReport:
     phases_nonpositive_tt: int = 0
     phases_beyond_max_tt: int = 0
     phases_unrepresentable: int = 0
+    phases_unpaired: int = 0
+    events_skipped_no_pairs: int = 0
     stations_truncated: set[str] = field(default_factory=set)
 
     def summary(self) -> str:
@@ -125,6 +141,15 @@ class WriteReport:
             parts.append(
                 f"{self.phases_unrepresentable} S picks too late to fit the HYPO71 "
                 "seconds field (>= 100 s after P)"
+            )
+        if self.phases_unpaired:
+            parts.append(
+                f"{self.phases_unpaired} picks with no P/S counterpart at the same "
+                "station (a HYPO71 card needs both)"
+            )
+        if self.events_skipped_no_pairs:
+            parts.append(
+                f"{self.events_skipped_no_pairs} events with no P/S pair at any station"
             )
         if self.stations_truncated:
             parts.append(
@@ -170,8 +195,7 @@ def read_bulletin(path: str | Path, *, weight_col: int | None = None) -> list[Ev
         Bulletin file (``*.bul``).
     weight_col
         Zero-based column index of the pick weight in the phase table, if your
-        bulletin prints one. Left as ``None`` every pick is given weight 1.000.
-        
+        bulletin prints one. Left as ``None`` every pick is given weight 1.000
 
     Phase rows are recognised by *content* -- a phase label in column 5 and a
     ``HH:MM:SS.sss`` clock time in column 6 -- rather than by counting columns, so
@@ -216,10 +240,7 @@ def read_bulletin(path: str | Path, *, weight_col: int | None = None) -> list[Ev
         for key in ("date", "time", "lat", "lon", "depth", "rms", "evid"):
             m = _BULLETIN_RX[key].match(line)
             if m:
-                # A repeated header key means a new event block has started. Keying
-                # off any repeat rather than off 'Date' specifically makes this
-                # independent of field order, so a bulletin that prints its event
-                # ID before the date does not attach that ID to the previous event.
+
                 if key in cur:
                     flush()
                     in_phases = False
@@ -276,6 +297,7 @@ def write_hypodd(
     min_phases: int = 4,
     max_tt: float | None = None,
     renumber: bool = False,
+    pad_time: bool = True,
 ) -> WriteReport:
     """Write ``phase.dat`` in HypoDD/ph2dt format.
 
@@ -291,6 +313,12 @@ def write_hypodd(
         ``False`` (default) keeps the bulletin event ID, so the HypoDD output can
         be joined back to the catalogue. The reference file does this -- its IDs
         run to 11 737 across 11 699 events. ``True`` renumbers from 1.
+    pad_time
+        ``True`` (default) writes hour and minute zero-padded to two digits, so
+        midnight reads ``00 00``. ``False`` writes them bare (``0 0``), which is
+        what homeros_catalog_ionio24.txt does -- pass it to reproduce that file
+        byte for byte. The header is read list-directed by ``ph2dt``, so both
+        parse identically; this only affects how the file looks.
     """
     path = Path(path)
     rep = WriteReport()
@@ -322,8 +350,9 @@ def write_hypodd(
         o = ev.origin
         secs = o.second + o.microsecond / 1e6
         evid = n if renumber else ev.evid
+        w = 2 if pad_time else 1  # field width for hour and minute
         out.append(
-            f"# {o.year} {o.month:02d} {o.day:02d} {o.hour} {o.minute} {secs:.2f} "
+            f"# {o.year} {o.month:02d} {o.day:02d} {o.hour:0{w}d} {o.minute:0{w}d} {secs:.2f} "
             f"{ev.lat:.4f} {ev.lon:.4f} {ev.depth:.2f} {ev.mag:.2f} "
             f"{ev.eh:.2f} {ev.ez:.2f} {ev.rms:.2f} {evid}"
         )
@@ -339,8 +368,8 @@ def write_hypodd(
 def read_hypodd(path: str | Path) -> list[Event]:
     """Read a HypoDD ``phase.dat`` back into :class:`Event` records.
 
-    Provided so an existing file can be checked, and so ``write_hypodd`` can be
-    round-trip tested against a reference file.
+    
+    
     """
     events: list[Event] = []
     for line in Path(path).read_text(encoding="utf-8", errors="replace").splitlines():
@@ -382,15 +411,10 @@ def read_hypodd(path: str | Path) -> list[Event]:
 
 
 # --------------------------------------------------------------------------- #
-# Writing  HYPO71 output
+# Writing the original HYPO71-style output
 # --------------------------------------------------------------------------- #
 def write_hypo71(events: list[Event], path: str | Path) -> WriteReport:
-    """
 
-    The S seconds field is now derived by subtracting the P arrival from the S
-    arrival as datetimes, so an S two or more minutes after P is no longer 60 s
-    short and an hour boundary no longer breaks it.
-    """
     path = Path(path)
     rep = WriteReport()
     out: list[str] = []
@@ -398,29 +422,39 @@ def write_hypo71(events: list[Event], path: str | Path) -> WriteReport:
         picks: dict[str, dict[str, datetime]] = {}
         for a in ev.arrivals:  # per event, so a stale P cannot pair with a later S
             picks.setdefault(a.station, {})[a.phase] = a.time
+        rows: list[str] = []
         for sta in sorted(picks):
             p, s = picks[sta].get("P"), picks[sta].get("S")
             if p is None or s is None:
+                # A HYPO71 card carries a P and an S for one station, so a lone
+                # pick cannot be expressed. Counted rather than dropped in
+                # silence -- the HypoDD output keeps these.
+                rep.phases_unpaired += 1
                 continue
-            # Station code padded to 6 characters exactly as the original did:
-            # a 3-character code gains ' EP', a 4-character code gains 'EP'.
+
             code = (sta + " EP") if len(sta) == 3 else (sta[:4] + "EP")
             p_secs = p.second + p.microsecond / 1e6
             s_secs = p_secs + (s - p).total_seconds()
             if s_secs >= 100:
                 # The HYPO71 S field is F5.2, so it cannot carry an S arriving 100 s
-                # or more after P. Writing it anyway overflows the column and
+                # or more after P. Writing it  overflows the column and
                 # corrupts every field to its right, so the pick is dropped here and
                 # counted. Such pairs are fine in the HypoDD output, which uses
                 # travel times rather than a seconds-within-the-minute field.
                 rep.phases_unrepresentable += 1
                 continue
-            out.append(
+            rows.append(
                 f"{code}   {p:%y%m%d%H%M}{p_secs:05.2f}       {s_secs:05.2f} S 2"
             )
-            rep.phases_written += 2
-        if out and not out[-1].startswith(" "):
-            out.append("                 10")
+        if not rows:
+            # Emitting a bare terminator here would leave two in a row, which
+            # reads back as one event, so the file would silently hold fewer
+            # events than this report claims.
+            rep.events_skipped_no_pairs += 1
+            continue
+        out.extend(rows)
+        out.append("                 10")
+        rep.phases_written += 2 * len(rows)
         rep.events_written += 1
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(out) + "\n", encoding="utf-8")
@@ -454,7 +488,7 @@ def _prompt_for_input(folder: str = "Input") -> Path:
         for cand in (d / name, Path(name)):
             if cand.is_file():
                 return cand
-        # Only a terminal can answer again; a pipe has nothing more to give.
+
         if not sys.stdin.isatty():
             raise SystemExit(f"error: {name} not found")
         print(f"   '{name}' is not in {folder}/ and is not a readable path -- try again.")
@@ -494,24 +528,22 @@ def main(argv: list[str] | None = None) -> int:
                     help="output directory (default: Results)")
     ap.add_argument("-o", "--output",
                     help="override the output filename; only valid with a single --format")
-    # Deliberately no default: None means "nobody said", which is what lets the
-    # script ask interactively without overriding an explicit -f. The fallback
-    # when nobody can be asked is 'both', so an existing workflow keeps getting
-    # Results/phases.txt while also gaining Results/phase.dat.
+
     ap.add_argument("-f", "--format", choices=("hypodd", "hypo71", "both"), default=None,
                     help="output format; asked interactively if omitted (fallback: both)")
     ap.add_argument("--min-phases", type=int, default=4)
     ap.add_argument("--max-tt", type=float, default=None, help="drop picks beyond N seconds")
     ap.add_argument("--weight-col", type=int, default=None,
                     help="zero-based column of the pick weight in the phase table")
+    ap.add_argument("--no-pad-time", dest="pad_time", action="store_false",
+                    help="write bare hour/minute ('0 0') instead of zero-padded "
+                         "('00 00'), matching homeros_catalog_ionio24.txt")
     ap.add_argument("--renumber", action="store_true",
                     help="renumber events 1..N instead of keeping bulletin IDs")
     args = ap.parse_args(argv)
 
     if args.output and args.format not in ("hypodd", "hypo71"):
-        # Refusing beats silently ignoring the flag: one --output cannot name two
-        # Checked before anything is read, and against the *explicit* --format, so
-        # the answer to an interactive question can never invalidate the flags.
+
         ap.error("--output names a single file; pass --format hypodd or --format "
                  "hypo71, or use --outdir to redirect both")
 
@@ -540,7 +572,8 @@ def main(argv: list[str] | None = None) -> int:
     if fmt in ("hypodd", "both"):
         out = Path(args.output) if args.output else outdir / "phase.dat"
         rep = write_hypodd(events, out, min_phases=args.min_phases,
-                           max_tt=args.max_tt, renumber=args.renumber)
+                           max_tt=args.max_tt, renumber=args.renumber,
+                           pad_time=args.pad_time)
         print(f"HypoDD phase input -> {out}: {rep.summary()}")
     if fmt in ("hypo71", "both"):
         out = Path(args.output) if args.output else outdir / "phases.txt"
