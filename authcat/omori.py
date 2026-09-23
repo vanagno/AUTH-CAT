@@ -10,7 +10,7 @@ import corner
 
 # Function to read earthquake catalog
 def read_earthquake_catalog(filename):
-    df = pd.read_csv(filename, delim_whitespace=True)
+    df = pd.read_csv(filename, sep=r"\s+")
     df['Datetime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
     return df
 
