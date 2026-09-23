@@ -78,7 +78,7 @@ def generate_stations_map(counts, station_coordinates, output_map_path):
     plt.savefig(output_map_path, dpi=400)
     plt.show()
     print(f"Map of the seismic stations used is saved to Figures/Map_Stations.png")
-    print(f"List of the number of P- and S-phases recorded for each station is saved to Results/station_phases_counts.png")
+    print(f"List of the number of P- and S-phases recorded for each station is saved to Results/station_phases_counts.txt")
 
 regd_sta_file_path = 'Input/regd.sta'
 input_folder = "Input"
