@@ -12,7 +12,7 @@ else:
 file_path = input("Please enter the name of the earthquake catalogue: ")  
 input_file_path = os.path.join(input_folder, file_path)    
 
-df = pd.read_csv(input_file_path, delim_whitespace=True)
+df = pd.read_csv(input_file_path, sep=r"\s+")
 
 fig, axs = plt.subplots(2, 2, figsize=(10, 8))  # Creating 2x2 subplot structure
 
