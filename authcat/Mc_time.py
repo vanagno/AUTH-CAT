@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import convolve
 
 def read_catalog(file_path):
-    df = pd.read_csv(file_path, delim_whitespace=True, skiprows=1, 
+    df = pd.read_csv(file_path, sep=r"\s+", skiprows=1, 
                      parse_dates={'DateTime': [0, 1]}, 
                      names=['Date', 'Time', 'Lat', 'Lon', 'Depth', 'M', 'RMS', 'AzGap', 'Nsta', 'Msta', 'ID'])
     return df.set_index('DateTime')
