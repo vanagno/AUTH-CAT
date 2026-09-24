@@ -44,7 +44,7 @@ def plot_magnitudes(df, output_file):
         df['Magnitude'],
         s=sizes,
         alpha=0.5,
-        edgecolors='none',
+        edgecolors='black',
         color='blue'
     )
 

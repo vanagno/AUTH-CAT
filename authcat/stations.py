@@ -80,7 +80,7 @@ def generate_stations_map(counts, station_coordinates, output_map_path):
     plt.show()
     print(f"Map of the seismic stations used is saved to {output_map_path}")
 
-regd_sta_file_path = 'Input/regd.sta'
+regd_sta_file_path = 'regd.sta'
 proj = open_project()
 input_folder = proj.input_dir
 if os.path.isdir(input_folder):

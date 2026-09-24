@@ -1,0 +1,140 @@
+{
+  "schema_version": "1.1",
+  "project": {
+    "name": "Arkalochori",
+    "created": "2026-09-24T18:16:38+03:00",
+    "bulletin_file": null,
+    "catalogue_file": null,
+    "catalogue_6col_file": null,
+    "catalogue_quakeml_file": null
+  },
+  "bulletin": {
+    "available": false,
+    "source": null,
+    "start_date": null,
+    "end_date": null,
+    "bounds": null,
+    "events_examined": null,
+    "events_written": null,
+    "months_missing": [],
+    "months_failed": []
+  },
+  "catalogue": {
+    "available": false,
+    "total_events": null,
+    "start_time": null,
+    "end_time": null,
+    "latitude_min": null,
+    "latitude_max": null,
+    "longitude_min": null,
+    "longitude_max": null,
+    "depth_min_km": null,
+    "depth_max_km": null,
+    "magnitude_min": null,
+    "magnitude_max": null,
+    "largest_event": {
+      "time": null,
+      "magnitude": null,
+      "latitude": null,
+      "longitude": null,
+      "depth_km": null,
+      "event_id": null
+    }
+  },
+  "magnitude_of_completeness": {
+    "available": false,
+    "maxc": {
+      "mc": null,
+      "b_value": null,
+      "b_value_uncertainty": null
+    },
+    "gft": {
+      "mc": null,
+      "b_value": null,
+      "b_value_uncertainty": null,
+      "goodness_of_fit_percent": null
+    },
+    "mbs": {
+      "mc": null,
+      "b_value": null,
+      "b_value_uncertainty": null
+    },
+    "summary_file": null,
+    "figures": {
+      "fmd": null,
+      "maxc": null,
+      "gft_residuals": null,
+      "gft": null,
+      "mbs_stability": null,
+      "mbs": null
+    }
+  },
+  "magnitude_regularization": {
+    "available": false,
+    "residual_threshold": null,
+    "flagged_stations": [],
+    "excluded_stations": [],
+    "magnitudes_file": null,
+    "modified_magnitudes_file": null,
+    "modified_catalogue_file": null,
+    "figure": null
+  },
+  "station_phases": {
+    "available": false,
+    "station_count": null,
+    "missing_coordinate_station_count": null,
+    "missing_coordinate_stations": [],
+    "counts_file": null,
+    "map_figure": null
+  },
+  "phases": {
+    "available": false,
+    "hypodd": {
+      "file": null,
+      "events": null,
+      "phases": null
+    },
+    "hypo71": {
+      "file": null,
+      "events": null,
+      "phases": null
+    },
+    "selection": {
+      "stations": [],
+      "file": null,
+      "events": null
+    }
+  },
+  "wadati": {
+    "available": false,
+    "pairs": null,
+    "vp_vs": {
+      "least_squares": null,
+      "orthogonal_regression": null
+    },
+    "figure": null
+  },
+  "modified_omori": {
+    "available": false,
+    "fit_start": null,
+    "start_time": null,
+    "events": null,
+    "K": null,
+    "c": null,
+    "p": null,
+    "bayesian": {
+      "K": null,
+      "c": null,
+      "p": null
+    },
+    "figure": null
+  },
+  "figures": {
+    "epicentral_map": null,
+    "histograms": null,
+    "magnitude_time": null,
+    "cumulative_events": null,
+    "mc_time": null
+  },
+  "history": []
+}

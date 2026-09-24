@@ -1,0 +1,14 @@
+
+Summary of Mc analysis and b-values
+
+MAXC Method:
+- Mc: 2.5
+- b-value: 0.93 +/- 0.03
+
+GFT Method:
+- Mc: 2.4
+- b-value: 0.89 +/- 0.03
+
+MBS Method:
+- Mc: 2.4
+- b-value: 0.89 +/- 0.03

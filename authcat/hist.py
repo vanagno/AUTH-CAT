@@ -29,21 +29,24 @@ def add_stats_annotation(ax, data, color):
 
 #----- Histogram for Depth ------------#
 axs[0, 0].hist(df['Depth'], bins=20, color='skyblue', edgecolor='black')
-axs[0, 0].set_title('Depths')
+axs[0, 0].set_title('Depths (km)')
 add_stats_annotation(axs[0, 0], df['Depth'], 'black')
 #----- Histogram for Magnitudes -------#
 axs[0, 1].hist(df['M'], bins=20, color='orange', edgecolor='black')
-axs[0, 1].set_title('Magnitudes')
+axs[0, 1].set_title('Magnitudes (ML)')
 add_stats_annotation(axs[0, 1], df['M'], 'black')
 #----- Histogram for RMS --------------#
 axs[1, 0].hist(df['RMS'], bins=20, color='green', edgecolor='black')
-axs[1, 0].set_title('RMS')
+axs[1, 0].set_title('RMS (sec)')
 add_stats_annotation(axs[1, 0], df['RMS'], 'black')
 #----- Histogram for Azimuthal Gap ----#
 axs[1, 1].hist(df['AzGap'], bins=20, color='red', edgecolor='black')
-axs[1, 1].set_title('Azimuthal Gaps')
+axs[1, 1].set_title('Azimuthal Gaps (°)')
 add_stats_annotation(axs[1, 1], df['AzGap'], 'black')
 
+for ax in axs.flat:
+    ax.set_ylabel('Counts')
+    ax.set_xlim(left=0)
 plt.tight_layout()
 directory = proj.figures_dir
 output_file = os.path.join(directory,'Histograms.png')
