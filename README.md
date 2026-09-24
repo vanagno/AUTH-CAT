@@ -38,7 +38,7 @@ Reference files shared by every project, such as the station list
    project used is taken without asking. `catalog.py` and `phases2.py` also
    accept `-p/--project`.
 
-3. Build the PDF report of everything recorded so far (needs `pip install reportlab`):
+3. Build the PDF report of everything recorded so far :
 
    ```
    python report.py                                # asks which project
