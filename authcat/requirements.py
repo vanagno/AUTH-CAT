@@ -1,4 +1,14 @@
+import importlib.metadata
+
+# Named as pip installs them
 modules_to_check = ['matplotlib', 'pandas', 'numpy', 'basemap','basemap-data-hires', 'cartopy', 'corner', 'emcee', 'scipy', 'reportlab']
+
+# Packages imported under a different name from the one pip installs
+import_names = {'basemap': 'mpl_toolkits.basemap'}
+
+# Data-only packages have nothing to import, so they are looked up by their
+# installed package record instead
+data_packages = {'basemap-data-hires'}
 
 def display_logo():
     logo = """
@@ -17,9 +27,12 @@ ________________________________________________________________________________
 def check_modules(modules):
     for module in modules:
         try:
-            __import__(module)
+            if module in data_packages:
+                importlib.metadata.version(module)
+            else:
+                __import__(import_names.get(module, module))
             print(f"{module} is installed.")
-        except ImportError:
+        except ImportError:  # includes importlib.metadata.PackageNotFoundError
             print(f"{module} is not installed.")
 
 if __name__ == "__main__":
