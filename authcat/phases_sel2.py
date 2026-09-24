@@ -14,6 +14,9 @@ filtered, which is what makes them consistent with the cut you are about to
 make; coordinates are extracted from ``station_phases_counts.txt`` in the same
 folder (written by ``stations.py``) when it is present. Both files live in the
 project's Results folder (see ``project.py``).
+
+Pressing Enter at the station prompt keeps the ``DEFAULT_STATIONS`` stations
+with the most P phases -- the top rows of the table printed above the prompt.
 """
 
 from __future__ import annotations
@@ -24,6 +27,9 @@ import re
 from project import open_project
 
 HYPO71_TERMINATOR = "                 10"
+
+#: Stations kept when the user presses Enter instead of listing them.
+DEFAULT_STATIONS = 20
 
 #: A HypoDD phase row: station in the first 8 columns, phase label last.
 _HYPODD_STA_WIDTH = 8
@@ -129,12 +135,17 @@ def read_station_coordinates(path):
     return coords
 
 
+def rank_by_p(counts):
+    """Station codes, most P phases first; ties in alphabetical order."""
+    return sorted(counts, key=lambda sta: (-counts[sta]["P"], sta))
+
+
 def print_counts_table(counts, coords, source):
     """Print phase counts per station under a column header.
 
     Sorted by P descending, matching the order stations.py writes.
     """
-    order = sorted(counts.items(), key=lambda kv: (-kv[1]["P"], kv[0]))
+    order = [(sta, counts[sta]) for sta in rank_by_p(counts)]
     show_coords = any(sta in coords for sta in counts)
 
     print(f"\nPhases per station in {source}:\n")
@@ -219,11 +230,16 @@ def read_and_filter_data(input_filename):
                                                    "station_phases_counts.txt"))
     print_counts_table(counts, coords, input_filename)
 
-    stations_input = input("Enter the station codes you want to keep (separated by commas): ")
+    stations_input = input("Enter the station codes you want to keep (separated by commas) "
+                           f"[blank = the {DEFAULT_STATIONS} with the most P phases]: ")
     desired_stations = {station.strip().upper() for station in stations_input.split(",")}
     desired_stations.discard("")
     if not desired_stations:
-        raise SystemExit("error: no station codes given")
+        top = rank_by_p(counts)[:DEFAULT_STATIONS]
+        if not top:
+            raise SystemExit("error: no stations in the phase list")
+        desired_stations = set(top)
+        print(f"Keeping the {len(top)} stations with the most P phases: {', '.join(top)}")
 
     unknown = sorted(desired_stations - set(counts))
     if unknown:
