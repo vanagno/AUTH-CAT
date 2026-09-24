@@ -31,8 +31,9 @@ except ImportError as exc:
         "report.py requires ReportLab. Install it with: pip install reportlab"
     ) from exc
 
+from project import open_project
 
-DEFAULT_JSON = Path("Results") / "Arkal.json"
+
 DEFAULT_REPORT_DIR = Path("Reports")
 
 PAGE_WIDTH, PAGE_HEIGHT = A4
@@ -828,13 +829,14 @@ def build_pdf(data: dict[str, Any], project_root: Path, output_path: Path) -> No
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate an AUTH-CAT PDF report from analysis_summary.json."
+        description="Generate an AUTH-CAT PDF report from a project record."
     )
     parser.add_argument(
         "json_file",
         nargs="?",
-        default=str(DEFAULT_JSON),
-        help=f"Path to analysis summary JSON (default: {DEFAULT_JSON})",
+        default=None,
+        help="Path to the project record, Projects/<name>/<name>.json "
+        "(default: asks which project, Enter = last used)",
     )
     parser.add_argument(
         "--output-dir",
@@ -847,14 +849,19 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    json_path = Path(args.json_file).resolve()
+    if args.json_file:
+        json_path = Path(args.json_file).resolve()
+    else:
+        json_path = open_project().json_path.resolve()
     data = load_json(json_path)
 
-    # In the standard AUTH-CAT layout the JSON is inside Results/.
+    # The project record sits at the top of its project folder,
+    # Projects/<name>/<name>.json, and the paths inside it are relative to
+    # that folder. Older records were kept inside Results/.
     if json_path.parent.name.lower() == "results":
         project_root = json_path.parent.parent
     else:
-        project_root = Path.cwd().resolve()
+        project_root = json_path.parent
 
     project_name = safe_get(data, "project", "name", default="AUTH-CAT") or "AUTH-CAT"
     safe_name = "".join(

@@ -53,7 +53,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import numpy as np
 import os
-from project import open_project
+from project import open_project, UTILITIES_DIR
 
 def generate_stations_map(counts, station_coordinates, output_map_path):
     p_phase_counts = [phases['P'] for phases in counts.values()]
@@ -80,7 +80,7 @@ def generate_stations_map(counts, station_coordinates, output_map_path):
     plt.show()
     print(f"Map of the seismic stations used is saved to {output_map_path}")
 
-regd_sta_file_path = 'regd.sta'
+regd_sta_file_path = os.path.join(UTILITIES_DIR, 'regd.sta')
 proj = open_project()
 input_folder = proj.input_dir
 if os.path.isdir(input_folder):
@@ -114,4 +114,4 @@ proj.update("stations.py", {"station_phases": {
     "missing_coordinate_stations": missing,
     "counts_file": proj.rel(output_file_path),
     "map_figure": proj.rel(output_map_path),
-}}, bulletin=proj.rel(input_file_path), station_file=regd_sta_file_path)
+}}, bulletin=proj.rel(input_file_path), station_file='Utilities/regd.sta')

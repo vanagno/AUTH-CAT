@@ -12,7 +12,11 @@ Projects/<name>/
     Results/      catalogues, phase lists, summaries all outputs from AUTH-CAT scripts
     Figures/      plots and maps
     Magnitudes/   station magnitude lists and their plots
+    Reports/      the PDF report written by report.py
 ```
+
+Reference files shared by every project, such as the station list
+`regd.sta`, live in `authcat/Utilities/`.
 ## Quickstart guide
 1. Start a project by downloading the bulletin for your target period and study area:
 
@@ -32,6 +36,13 @@ Projects/<name>/
    writes its output there. When input is piped in by a batch script, the last
    project used is taken without asking. `catalog.py` and `phases2.py` also
    accept `-p/--project`.
+
+3. Build the PDF report of everything recorded so far (needs `pip install reportlab`):
+
+   ```
+   python report.py                                # asks which project
+   python report.py Projects/Arkal/Arkal.json      # or name the project record
+   ```
 
 
 The project record follows the layout in `project.py` (`TEMPLATE`). A section

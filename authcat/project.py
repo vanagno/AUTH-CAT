@@ -45,6 +45,10 @@ from pathlib import Path
 PROJECTS_DIR = Path("Projects")
 SUBDIRS = ("Input", "Results", "Figures", "Magnitudes")
 
+#: Reference files shared by every project, such as the station list
+#: regd.sta. Found next to the scripts, whatever folder they are run from.
+UTILITIES_DIR = Path(__file__).resolve().parent / "Utilities"
+
 #: Holds the name of the last project used, which the prompt offers as default.
 _CURRENT_FILE = ".current"
 _NAME_RX = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
