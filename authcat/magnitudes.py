@@ -6,7 +6,7 @@ from matplotlib.patches import Patch
 import numpy as np
 from project import open_project
 
-FLAG_COLOR = 'crimson'
+FLAG_COLOR = 'purple'
 
 def parse_earthquake_data_from_file(file_path):
     import re

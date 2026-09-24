@@ -91,6 +91,7 @@ def plot_travel_times(p_travel_times, sp_diff_times, output_file):
     plt.xlabel('P Travel Time (seconds)')
     plt.ylabel('S-P Travel Time (seconds)')
     plt.xlim(left=0)
+    plt.ylim(bottom=0)
     plt.legend()
     plt.grid(True)
     os.makedirs(os.path.dirname(output_file), exist_ok=True)

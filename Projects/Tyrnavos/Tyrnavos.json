@@ -93,54 +93,75 @@
     "figure": "Magnitudes/magnitudes.png"
   },
   "station_phases": {
-    "available": false,
-    "station_count": null,
-    "missing_coordinate_station_count": null,
-    "missing_coordinate_stations": [],
-    "counts_file": null,
-    "map_figure": null
+    "available": true,
+    "station_count": 116,
+    "missing_coordinate_station_count": 16,
+    "missing_coordinate_stations": [
+      "AOS2",
+      "BCI",
+      "E02",
+      "KANL",
+      "MMAA",
+      "PLD",
+      "PRR",
+      "PUK",
+      "STC",
+      "TST",
+      "TYR2A",
+      "TYR3",
+      "TYR5",
+      "TYR6",
+      "VRKS",
+      "VTS1"
+    ],
+    "counts_file": "Results/station_phases_counts.txt",
+    "map_figure": "Figures/Map_Stations.png"
   },
   "phases": {
-    "available": false,
+    "available": true,
     "hypodd": {
-      "file": null,
-      "events": null,
-      "phases": null
+      "file": "Results/phase.dat",
+      "events": 1753,
+      "phases": 48015
     },
     "hypo71": {
-      "file": null,
-      "events": null,
-      "phases": null
+      "file": "Results/phases.txt",
+      "events": 1753,
+      "phases": 47931
     },
     "selection": {
-      "stations": [],
-      "file": null,
-      "events": null
+      "stations": [
+        "KZN",
+        "LIT",
+        "THL"
+      ],
+      "file": "Results/phase_sel.dat",
+      "events": 1723
     }
   },
   "wadati": {
-    "available": false,
-    "pairs": null,
+    "available": true,
+    "pairs": 18453,
     "vp_vs": {
-      "least_squares": null,
-      "orthogonal_regression": null
+      "least_squares": 1.77,
+      "orthogonal_regression": 1.78
     },
-    "figure": null
+    "figure": "Figures/Wadati.png"
   },
   "modified_omori": {
-    "available": false,
-    "fit_start": null,
-    "start_time": null,
-    "events": null,
-    "K": null,
-    "c": null,
-    "p": null,
+    "available": true,
+    "fit_start": "catalogue_start",
+    "start_time": "2021-03-03T08:00:37.674000",
+    "events": 1753,
+    "K": 5947.99,
+    "c": 4.97,
+    "p": 1.77,
     "bayesian": {
-      "K": null,
-      "c": null,
-      "p": null
+      "K": 6689.96,
+      "c": 5.16,
+      "p": 1.81
     },
-    "figure": null
+    "figure": "Figures/aftershock_decay_omori_fit.png"
   },
   "figures": {
     "epicentral_map": "Figures/Map_epic.png",
@@ -311,6 +332,90 @@
         "catalogue": "Results/Tyrnavos_cat.txt",
         "modified_magnitudes": "Magnitudes/modified_magnitudes.txt",
         "events_updated": 1753
+      }
+    },
+    {
+      "time": "2026-09-24T19:45:13+03:00",
+      "script": "stations.py",
+      "sections": [
+        "station_phases"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul",
+        "station_file": "Utilities/regd.sta"
+      }
+    },
+    {
+      "time": "2026-09-24T19:46:25+03:00",
+      "script": "phases2.py",
+      "sections": [
+        "phases"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul",
+        "min_phases": 4,
+        "max_tt": null
+      }
+    },
+    {
+      "time": "2026-09-24T19:48:11+03:00",
+      "script": "phases_sel2.py",
+      "sections": [
+        "phases"
+      ],
+      "details": {
+        "phase_list": "Results/phase.dat",
+        "format": "hypodd"
+      }
+    },
+    {
+      "time": "2026-09-24T19:49:08+03:00",
+      "script": "wadati.py",
+      "sections": [
+        "wadati"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul"
+      }
+    },
+    {
+      "time": "2026-09-24T19:50:42+03:00",
+      "script": "omori2.py",
+      "sections": [
+        "modified_omori"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-24T19:57:51+03:00",
+      "script": "wadati.py",
+      "sections": [
+        "wadati"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul"
+      }
+    },
+    {
+      "time": "2026-09-24T20:01:22+03:00",
+      "script": "magnitudes.py",
+      "sections": [
+        "magnitude_regularization"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul"
+      }
+    },
+    {
+      "time": "2026-09-24T20:02:08+03:00",
+      "script": "magnitudes.py",
+      "sections": [
+        "magnitude_regularization"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul"
       }
     }
   ]
