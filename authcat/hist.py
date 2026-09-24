@@ -1,8 +1,10 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+from project import open_project
 
-input_folder = "Results"
+proj = open_project()
+input_folder = proj.results_dir
 if os.path.isdir(input_folder):
 	print(f"{input_folder} folder:")
 	for filename in os.listdir(input_folder):
@@ -43,9 +45,11 @@ axs[1, 1].set_title('Azimuthal Gaps')
 add_stats_annotation(axs[1, 1], df['AzGap'], 'black')
 
 plt.tight_layout()
-directory = 'Figures'
+directory = proj.figures_dir
 output_file = os.path.join(directory,'Histograms.png')
 os.makedirs(directory, exist_ok=True)
 plt.savefig(output_file)
 plt.show()
-print(f"Histograms saved to Figures/Histograms.png")
+print(f"Histograms saved to {output_file}")
+proj.update("hist.py", {"figures": {"histograms": proj.rel(output_file)}},
+            catalogue=proj.rel(input_file_path))

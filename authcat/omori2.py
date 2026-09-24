@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,10 +7,11 @@ import scipy.integrate as integrate
 import emcee
 import corner
 from obspy.core.utcdatetime import UTCDateTime as UTC
+from project import open_project
 
 # Read the catalog
 def read_catalog(filename):
-    df = pd.read_csv(filename, delim_whitespace=True)
+    df = pd.read_csv(filename, sep=r"\s+")
     df['Datetime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'], errors='coerce')
     return df
 
@@ -60,6 +62,7 @@ def log_prob(theta, edges, observed_counts, bounds):
 
 # Main processing and plotting
 def fit_and_plot(df, save_dir, base_filename, start_time=None):
+    """Fit the modified Omori law, plot it and return the fit for the project record."""
     df = filter_catalog(df, start_time)
     mags = df['M'].values
     times = (df['Datetime'] - df['Datetime'].min()).dt.total_seconds() / 86400  # in days
@@ -107,10 +110,29 @@ def fit_and_plot(df, save_dir, base_filename, start_time=None):
     ax.set_title('Modified Omori fit')
     ax.legend()
     plt.tight_layout()
-    plt.savefig(f'{save_dir}/{base_filename}_omori_fit.png', dpi=100)
+    figure = os.path.join(save_dir, f'{base_filename}_omori_fit.png')
+    os.makedirs(save_dir, exist_ok=True)
+    plt.savefig(figure, dpi=100)
     plt.show()
-# Example usage
-filename = 'Results/tyrnavos_cat.txt'
+    print(f"Modified Omori fit saved to {figure}")
+    return {
+        "start_time": df['Datetime'].min().isoformat(),
+        "events": len(df),
+        "K": round(float(K_mle), 2), "c": round(float(c_mle), 2), "p": round(float(p_mle), 2),
+        "bayesian": {"K": round(float(K_bayes), 2), "c": round(float(c_bayes), 2),
+                     "p": round(float(p_bayes), 2)},
+        "figure": figure,
+    }
+
+proj = open_project()
+input_folder = proj.results_dir
+if os.path.isdir(input_folder):
+    print(f"{input_folder} folder:")
+    for name in os.listdir(input_folder):
+        print(name)
+else:
+    print(f"The folder {input_folder} does not exist.")
+filename = os.path.join(input_folder, input("Please enter the name of the earthquake catalogue: ").strip())
 df = read_catalog(filename)
 
 # # Ask user
@@ -132,12 +154,14 @@ choice = input("Enter your choice (1/2/3): ").strip()
 if choice == '1':
     largest_eq = df.loc[df['M'].idxmax()]
     start_time = largest_eq['Datetime']
+    fit_start = "largest_event"
     print(f"Starting from largest EQ at {start_time}, M={largest_eq['M']:.1f}")
 
 elif choice == '2':
     custom_str = input("Enter start date and time (YYYY-MM-DD HH:MM:SS): ").strip()
     try:
         start_time = pd.to_datetime(custom_str)
+        fit_start = start_time.isoformat()
         print(f"Using custom start time: {start_time}")
     except Exception as e:
         print("Invalid format. Please use YYYY-MM-DD HH:MM:SS. Exiting.")
@@ -145,9 +169,13 @@ elif choice == '2':
 
 elif choice == '3':
     start_time = None
+    fit_start = "catalogue_start"
     print("Using entire catalog from beginning.")
 else:
     print("Invalid choice. Exiting.")
     exit()
 
-fit_and_plot(df, 'Results', 'aftershock_decay', start_time)
+fit = fit_and_plot(df, proj.figures_dir, 'aftershock_decay', start_time)
+fit["figure"] = proj.rel(fit["figure"])
+proj.update("omori2.py", {"modified_omori": {"fit_start": fit_start, **fit}},
+            catalogue=proj.rel(filename))

@@ -1,7 +1,12 @@
 import os
 import re
+import sys
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 import numpy as np
+from project import open_project
+
+FLAG_COLOR = 'crimson'
 
 def parse_earthquake_data_from_file(file_path):
     import re
@@ -90,32 +95,76 @@ def calculate_median_residuals(earthquake_data):
     return median_residuals
 
 
-def plot_station_data(station_counts, median_residuals):
-    max_observations = max(station_counts.values())
-    threshold = 0.05 * max_observations
+def ask_residual_threshold():
+    """Ask for the |median residual| above which a station is flagged.
 
-    filtered_stations = {station: count for station, count in station_counts.items() if count > threshold and station in median_residuals}
+    Blank means no threshold. Asked only at a terminal, so a batch script
+    piping in its answers is not thrown out of step by the extra question.
+    """
+    if not sys.stdin.isatty():
+        return None
+    while True:
+        try:
+            answer = input("Residual threshold: highlight stations whose |median residual| "
+                           "exceeds (e.g. 0.3, blank = none): ").strip()
+        except EOFError:
+            return None
+        if not answer:
+            return None
+        try:
+            return abs(float(answer))
+        except ValueError:
+            print(f"'{answer}' is not a number; please try again")
+
+
+def plot_station_data(station_counts, median_residuals, output_file, residual_threshold=None):
+    """Plot median residual and observation count per station.
+
+    Stations whose |median residual| exceeds `residual_threshold` are drawn in
+    FLAG_COLOR in both panels, and returned so they can be offered for
+    elimination.
+    """
+    max_observations = max(station_counts.values())
+    min_observations = 0.05 * max_observations
+
+    filtered_stations = {station: count for station, count in station_counts.items() if count > min_observations and station in median_residuals}
 
     sorted_stations = sorted(filtered_stations.items(), key=lambda item: item[1], reverse=True)
     stations = [station for station, count in sorted_stations]
     counts = [filtered_stations[station] for station in stations]
     medians = [median_residuals[station] for station in stations if station in median_residuals]
 
+    flagged = []
+    if residual_threshold is not None:
+        flagged = [station for station in stations if abs(median_residuals[station]) > residual_threshold]
+
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
-    ax1.bar(stations, medians, color='violet', edgecolor='black')
+    ax1.bar(stations, medians, edgecolor='black',
+            color=[FLAG_COLOR if station in flagged else 'violet' for station in stations])
     ax1.set_title('Median Residual (Event Mag - Station Mag)')
     ax1.set_ylabel('Median Residual')
     ax1.axhline(0, color='black', linewidth=1, linestyle='-')
-    ax2.bar(stations, counts, color='royalblue', edgecolor='black')
+    if residual_threshold is not None:
+        for level in (residual_threshold, -residual_threshold):
+            ax1.axhline(level, color=FLAG_COLOR, linewidth=1, linestyle='--')
+        ax1.legend(handles=[Patch(facecolor=FLAG_COLOR, edgecolor='black',
+                                  label=f'|median residual| > {residual_threshold:g}')],
+                   loc='best')
+    ax2.bar(stations, counts, edgecolor='black',
+            color=[FLAG_COLOR if station in flagged else 'royalblue' for station in stations])
     ax2.set_ylabel('Number of Observations')
     plt.xticks(rotation=45)
     plt.tight_layout()
-    directory = 'Magnitudes'
-    output_file = os.path.join(directory,'magnitudes.png')
-    os.makedirs(directory, exist_ok=True)
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     plt.savefig(output_file, dpi=400) 
     plt.show()
-    print(f"Median residual magnitudes plot saved to Magnitudes/magnitudes.png")
+    print(f"Median residual magnitudes plot saved to {output_file}")
+    if flagged:
+        print(f"Stations with |median residual| > {residual_threshold:g}: "
+              + ", ".join(f"{station} ({median_residuals[station]:+.2f})" for station in flagged))
+    elif residual_threshold is not None:
+        print(f"No station has |median residual| > {residual_threshold:g}")
+    return flagged
 
 
 def modify_output_file(directory, original_filename, modified_filename, stations_to_eliminate):
@@ -188,21 +237,34 @@ def compute_and_append_mean_magnitudes(directory, filename):
         print(f"Failed to process the file: {e}")
 
 
-def user_interaction(directory):
+def user_interaction(directory, flagged=()):
+    """Offer to recompute magnitudes without some stations.
+
+    Returns the stations eliminated, or None when the user declines. A blank
+    answer to the station question takes the flagged stations.
+    """
     response = input("Do you want to recompute magnitudes? (yes/no): ").lower()
     if response == 'yes':
-        stations_input = input("Which station magnitudes do you want to eliminate? (with commas): ")
-        stations_to_eliminate = [station.strip() for station in stations_input.split(',')]
+        prompt = "Which station magnitudes do you want to eliminate? (with commas)"
+        if flagged:
+            prompt += f" [blank = {', '.join(flagged)}]"
+        stations_input = input(prompt + ": ")
+        stations_to_eliminate = [station.strip() for station in stations_input.split(',') if station.strip()]
+        if not stations_to_eliminate:
+            stations_to_eliminate = list(flagged)
         modify_output_file(directory, "magnitudes.txt", "modified_magnitudes.txt", stations_to_eliminate)
         print("Updated the output file by removing specified stations.")
 
         if input("Do you want to compute mean magnitudes for each event? (yes/no): ").lower() == 'yes':
             compute_and_append_mean_magnitudes(directory, "modified_magnitudes.txt")
-            print("New mean magnidutes were computed and written to Magnitudes/modified_magnitudes.txt")
+            print(f"New mean magnidutes were computed and written to {os.path.join(directory, 'modified_magnitudes.txt')}")
+        return stations_to_eliminate
+    return None
 
 def main():
-    directory = "Magnitudes"
-    input_folder = "Input"
+    proj = open_project()
+    directory = proj.magnitudes_dir
+    input_folder = proj.input_dir
     if os.path.isdir(input_folder):
         print(f"{input_folder} folder:")
         for filename in os.listdir(input_folder):
@@ -217,9 +279,22 @@ def main():
     write_earthquake_data_to_file(parsed_data, directory, output_file)
     station_counts = count_observations_per_station(parsed_data)
     median_residuals = calculate_median_residuals(parsed_data)
-    plot_station_data(station_counts, median_residuals)
+    residual_threshold = ask_residual_threshold()
+    figure = os.path.join(directory, 'magnitudes.png')
+    flagged = plot_station_data(station_counts, median_residuals, figure, residual_threshold)
 
-    user_interaction(directory)
+    excluded = user_interaction(directory, flagged)
+
+    section = {
+        "residual_threshold": residual_threshold,
+        "flagged_stations": flagged,
+        "magnitudes_file": proj.rel(os.path.join(directory, output_file)),
+        "figure": proj.rel(figure),
+    }
+    if excluded is not None:
+        section["excluded_stations"] = excluded
+        section["modified_magnitudes_file"] = proj.rel(os.path.join(directory, "modified_magnitudes.txt"))
+    proj.update("magnitudes.py", {"magnitude_regularization": section}, bulletin=proj.rel(input_file_path))
 
 if __name__ == "__main__":
     main()

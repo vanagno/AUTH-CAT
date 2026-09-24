@@ -3,11 +3,12 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import convolve
+from project import open_project
 
 def read_catalog(file_path):
     df = pd.read_csv(file_path, sep=r"\s+", skiprows=1, 
-                     parse_dates={'DateTime': [0, 1]}, 
                      names=['Date', 'Time', 'Lat', 'Lon', 'Depth', 'M', 'RMS', 'AzGap', 'Nsta', 'Msta', 'ID'])
+    df['DateTime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
     return df.set_index('DateTime')
 
 def compute_mc(magnitudes, window_length, step=1):
@@ -22,7 +23,7 @@ def compute_mc(magnitudes, window_length, step=1):
     
     return mc_values
 
-def plot_mc(times, mc_values, filtered_mc_values):
+def plot_mc(times, mc_values, filtered_mc_values, output_file):
     plt.figure(figsize=(12, 6))
     plt.plot(times, mc_values, color='gray', label='Raw Mc')
     plt.plot(times, filtered_mc_values, color='blue', linewidth=2, label='Filtered Mc')
@@ -31,14 +32,13 @@ def plot_mc(times, mc_values, filtered_mc_values):
     plt.ylabel('Magnitude of Completeness (MAXC)')
     plt.legend()
     plt.grid(False)
-    directory = 'Figures'
-    output_file = os.path.join(directory,'Mc_time.png')
-    os.makedirs(directory, exist_ok=True)
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     plt.savefig(output_file)     
     plt.show()
-    print(f"Mc vs time plot saved to Figures/Mc_time.png")
+    print(f"Mc vs time plot saved to {output_file}")
 
-input_folder = "Results"
+proj = open_project()
+input_folder = proj.results_dir
 if os.path.isdir(input_folder):
     print(f"{input_folder} folder:")
     for filename in os.listdir(input_folder):
@@ -59,4 +59,8 @@ filtered_mc_values = convolve(mc_values, filter_kernel, mode='valid')
 
 times = df.index[window_length-1:-filter_length+1] 
 
-plot_mc(times, mc_values[filter_length-1:], filtered_mc_values)
+output_file = os.path.join(proj.figures_dir, 'Mc_time.png')
+plot_mc(times, mc_values[filter_length-1:], filtered_mc_values, output_file)
+proj.update("Mc_time.py", {"figures": {"mc_time": proj.rel(output_file)}},
+            catalogue=proj.rel(input_file_path), window_length=window_length,
+            filter_length=filter_length)

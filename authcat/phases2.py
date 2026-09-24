@@ -9,12 +9,16 @@ Writes either format:
       # YR MO DY HR MN SC LAT LON DEP MAG EH EZ RMS ID
       STA        TT     WGHT  PHA
 
-* ``hypo71`` -- 
+* ``hypo71`` -- HYPO71 phase list (``phases.txt``). One card per station,
+  carrying its P reading and, when the station also has one, its S reading in
+  the same card; a station with only a P gets a P-only card. Events end with a
+  ``10`` terminator line.
 
 Run with no ``--format`` at a terminal and the script asks which format(s) to
 write. With stdin piped, or with ``--format`` given, it does not ask -- so
 existing batch scripts keep working unchanged and get both formats, meaning
-``Results/phases.txt`` as before plus ``Results/phase.dat`` alongside it.
+``Results/phases.txt`` as before plus ``Results/phase.dat`` alongside it, in
+the project's folder (see ``project.py``).
 
 Usage
 -----
@@ -36,6 +40,8 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
+
+from project import open_project
 
 __all__ = [
     "Arrival",
@@ -123,8 +129,8 @@ class WriteReport:
     phases_nonpositive_tt: int = 0
     phases_beyond_max_tt: int = 0
     phases_unrepresentable: int = 0
-    phases_unpaired: int = 0
-    events_skipped_no_pairs: int = 0
+    phases_s_without_p: int = 0
+    events_skipped_no_p: int = 0
     stations_truncated: set[str] = field(default_factory=set)
 
     def summary(self) -> str:
@@ -140,16 +146,16 @@ class WriteReport:
         if self.phases_unrepresentable:
             parts.append(
                 f"{self.phases_unrepresentable} S picks too late to fit the HYPO71 "
-                "seconds field (>= 100 s after P)"
+                "seconds field (>= 100 s after P); their P is written alone"
             )
-        if self.phases_unpaired:
+        if self.phases_s_without_p:
             parts.append(
-                f"{self.phases_unpaired} picks with no P/S counterpart at the same "
-                "station (a HYPO71 card needs both)"
+                f"{self.phases_s_without_p} S picks with no P at the same station "
+                "(a HYPO71 card takes its date and minute from the P)"
             )
-        if self.events_skipped_no_pairs:
+        if self.events_skipped_no_p:
             parts.append(
-                f"{self.events_skipped_no_pairs} events with no P/S pair at any station"
+                f"{self.events_skipped_no_p} events with no P pick at any station"
             )
         if self.stations_truncated:
             parts.append(
@@ -423,38 +429,44 @@ def write_hypo71(events: list[Event], path: str | Path) -> WriteReport:
         for a in ev.arrivals:  # per event, so a stale P cannot pair with a later S
             picks.setdefault(a.station, {})[a.phase] = a.time
         rows: list[str] = []
+        n_phases = 0
         for sta in sorted(picks):
             p, s = picks[sta].get("P"), picks[sta].get("S")
-            if p is None or s is None:
-                # A HYPO71 card carries a P and an S for one station, so a lone
-                # pick cannot be expressed. Counted rather than dropped in
-                # silence -- the HypoDD output keeps these.
-                rep.phases_unpaired += 1
+            if p is None:
+                # The card's date, hour and minute columns belong to the P
+                # reading and the S seconds are counted from that minute, so an
+                # S with no P at the station has nothing to hang on. Counted
+                # rather than dropped in silence -- the HypoDD output keeps it.
+                rep.phases_s_without_p += 1
                 continue
 
             code = (sta + " EP") if len(sta) == 3 else (sta[:4] + "EP")
             p_secs = p.second + p.microsecond / 1e6
-            s_secs = p_secs + (s - p).total_seconds()
-            if s_secs >= 100:
-                # The HYPO71 S field is F5.2, so it cannot carry an S arriving 100 s
-                # or more after P. Writing it  overflows the column and
-                # corrupts every field to its right, so the pick is dropped here and
-                # counted. Such pairs are fine in the HypoDD output, which uses
-                # travel times rather than a seconds-within-the-minute field.
-                rep.phases_unrepresentable += 1
-                continue
-            rows.append(
-                f"{code}   {p:%y%m%d%H%M}{p_secs:05.2f}       {s_secs:05.2f} S 2"
-            )
+            card = f"{code}   {p:%y%m%d%H%M}{p_secs:05.2f}"
+            n_phases += 1
+            if s is not None:
+                s_secs = p_secs + (s - p).total_seconds()
+                if s_secs >= 100:
+                    # The HYPO71 S field is F5.2, so it cannot carry an S arriving
+                    # 100 s or more after P. Writing it overflows the column and
+                    # corrupts every field to its right, so the S is dropped here
+                    # and counted, and the P goes out alone. Such pairs are fine in
+                    # the HypoDD output, which uses travel times rather than a
+                    # seconds-within-the-minute field.
+                    rep.phases_unrepresentable += 1
+                else:
+                    card += f"       {s_secs:05.2f} S 2"
+                    n_phases += 1
+            rows.append(card)
         if not rows:
             # Emitting a bare terminator here would leave two in a row, which
             # reads back as one event, so the file would silently hold fewer
             # events than this report claims.
-            rep.events_skipped_no_pairs += 1
+            rep.events_skipped_no_p += 1
             continue
         out.extend(rows)
         out.append("                 10")
-        rep.phases_written += 2 * len(rows)
+        rep.phases_written += n_phases
         rep.events_written += 1
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(out) + "\n", encoding="utf-8")
@@ -523,9 +535,11 @@ def _prompt_for_format(default: str = "both") -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("-p", "--project",
+                    help="project to work in; prompts if omitted (Enter = last used)")
     ap.add_argument("-i", "--input", help="bulletin file; prompts if omitted")
-    ap.add_argument("-d", "--outdir", default="Results",
-                    help="output directory (default: Results)")
+    ap.add_argument("-d", "--outdir", default=None,
+                    help="output directory (default: the project's Results folder)")
     ap.add_argument("-o", "--output",
                     help="override the output filename; only valid with a single --format")
 
@@ -547,7 +561,8 @@ def main(argv: list[str] | None = None) -> int:
         ap.error("--output names a single file; pass --format hypodd or --format "
                  "hypo71, or use --outdir to redirect both")
 
-    src = Path(args.input) if args.input else _prompt_for_input()
+    proj = open_project(args.project)
+    src = Path(args.input) if args.input else _prompt_for_input(proj.input_dir)
     if not src.is_file():
         print(f"error: {src} not found", file=sys.stderr)
         return 1
@@ -568,17 +583,24 @@ def main(argv: list[str] | None = None) -> int:
     if fmt is None:
         fmt = _prompt_for_format() if sys.stdin.isatty() else "both"
 
-    outdir = Path(args.outdir)
+    outdir = Path(args.outdir) if args.outdir else proj.results_dir
+    written = {}
     if fmt in ("hypodd", "both"):
         out = Path(args.output) if args.output else outdir / "phase.dat"
         rep = write_hypodd(events, out, min_phases=args.min_phases,
                            max_tt=args.max_tt, renumber=args.renumber,
                            pad_time=args.pad_time)
         print(f"HypoDD phase input -> {out}: {rep.summary()}")
+        written["hypodd"] = {"file": proj.rel(out), "events": rep.events_written,
+                             "phases": rep.phases_written}
     if fmt in ("hypo71", "both"):
         out = Path(args.output) if args.output else outdir / "phases.txt"
         rep = write_hypo71(events, out)
         print(f"HYPO71 phase list  -> {out}: {rep.summary()}")
+        written["hypo71"] = {"file": proj.rel(out), "events": rep.events_written,
+                             "phases": rep.phases_written}
+    proj.update("phases2.py", {"phases": written}, bulletin=proj.rel(src),
+                min_phases=args.min_phases, max_tt=args.max_tt)
     return 0
 
 

@@ -4,6 +4,8 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from project import open_project
+
 COLUMNS = ['Year', 'Stamp', 'Latitude', 'Longitude', 'Depth', 'Magnitude']
 
 
@@ -35,7 +37,7 @@ def read_sixcol(file_path):
     return df.reset_index(drop=True)
 
 
-def calculate_cumulative_earthquakes(file_path, mc=None):
+def calculate_cumulative_earthquakes(file_path, mc=None, figures_dir='Figures'):
     """Plot the cumulative count, whole catalogue and above Mc.
 
     Returns the full catalogue and the part of it at or above Mc, both with
@@ -64,7 +66,7 @@ def calculate_cumulative_earthquakes(file_path, mc=None):
     ax2.set_xlabel('Days Since Start of Catalog')
     ax2.set_ylabel(f'Cumulative Count Above Mc ({mc})')
     
-    directory = 'Figures'
+    directory = figures_dir
     output_file = os.path.join(directory, 'cumulative_earthquakes.png')
     os.makedirs(directory, exist_ok=True)
     fig.savefig(output_file)
@@ -102,5 +104,13 @@ def prompt_for_input(folder):
 
 
 if __name__ == "__main__":
+    proj = open_project()
+    path = prompt_for_input(proj.results_dir)
+    mc = prompt_for_mc()
     result, filtered_result = calculate_cumulative_earthquakes(
-        prompt_for_input("Results"))
+        path, mc, figures_dir=proj.figures_dir)
+    proj.update("cumevents2.py",
+                {"figures": {"cumulative_events": proj.rel(
+                    os.path.join(proj.figures_dir, 'cumulative_earthquakes.png'))}},
+                catalogue=proj.rel(path), mc=mc, events=len(result),
+                events_above_mc=len(filtered_result))

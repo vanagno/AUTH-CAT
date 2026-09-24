@@ -3,6 +3,7 @@ import numpy as np
 from datetime import datetime
 from scipy.odr import Model, ODR, RealData
 import os
+from project import open_project
 
 def parse_earthquake_data(bulletin_text):
     lines = bulletin_text.strip().split('\n')
@@ -60,7 +61,9 @@ def compute_travel_times(earthquakes):
 def linear_function(p, x):
     return p[0] * x + p[1]
 
-def plot_travel_times(p_travel_times, sp_diff_times):
+def plot_travel_times(p_travel_times, sp_diff_times, output_file):
+    """Plot the Wadati diagram, save it to `output_file` and return the Vp/Vs
+    ratios from least squares and from orthogonal regression."""
     plt.figure(figsize=(10, 6))
     plt.scatter(p_travel_times, sp_diff_times, color='blue', edgecolor='k')
     
@@ -90,10 +93,14 @@ def plot_travel_times(p_travel_times, sp_diff_times):
     plt.xlim(left=0)
     plt.legend()
     plt.grid(True)
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    plt.savefig(output_file)
     plt.show()
+    return 1 + slope, 1 + beta[0]
 
 def main():
-    input_folder = "Input"
+    proj = open_project()
+    input_folder = proj.input_dir
     if os.path.isdir(input_folder):
         print(f"{input_folder} folder:")
         for filename in os.listdir(input_folder):
@@ -105,7 +112,14 @@ def main():
     with open(input_file_path, 'r') as file:
         bulletin_text = file.read()
     p_travel_times, sp_diff_times, header = compute_travel_times(parse_earthquake_data(bulletin_text))
-    plot_travel_times(p_travel_times, sp_diff_times)
-    print("Wadati diagram saved to Figures/Wadati.png")
+    output_file = os.path.join(proj.figures_dir, 'Wadati.png')
+    vpvs_ls, vpvs_or = plot_travel_times(p_travel_times, sp_diff_times, output_file)
+    print(f"Wadati diagram saved to {output_file}")
+    proj.update("wadati.py", {"wadati": {
+        "pairs": len(p_travel_times),
+        "vp_vs": {"least_squares": round(float(vpvs_ls), 2),
+                  "orthogonal_regression": round(float(vpvs_or), 2)},
+        "figure": proj.rel(output_file),
+    }}, bulletin=proj.rel(input_file_path))
 
 main()

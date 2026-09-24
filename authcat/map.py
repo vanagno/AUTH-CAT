@@ -3,6 +3,7 @@ from matplotlib.patches import Patch
 from mpl_toolkits.basemap import Basemap
 import numpy as np
 import os
+from project import open_project
 
 def read_earthquake_catalog(file_path):
     """
@@ -18,7 +19,7 @@ def read_earthquake_catalog(file_path):
             magnitudes.append(float(parts[5]))
     return latitudes, longitudes, magnitudes
 
-def plot_earthquakes_final_rounded_ticks(latitudes, longitudes, magnitudes):
+def plot_earthquakes_final_rounded_ticks(latitudes, longitudes, magnitudes, output_file):
     """
     Plots earthquakes on a map with meridians and parallels drawn every 0.2 degrees.
     Adjusts the start and end points for ticks to be rounded to the second decimal place.
@@ -69,14 +70,13 @@ def plot_earthquakes_final_rounded_ticks(latitudes, longitudes, magnitudes):
     
     plt.legend(handles=legend_patches, loc='upper left', title='Magnitudes')
     plt.title('Earthquake Locations')
-    directory = 'Figures'
-    output_file = os.path.join(directory,'Map_epic.png')
-    os.makedirs(directory, exist_ok=True)
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     plt.savefig(output_file)
     plt.show()
 
 if __name__ == "__main__":
-    input_folder = "Results"
+    proj = open_project()
+    input_folder = proj.results_dir
     if os.path.isdir(input_folder):
         print(f"{input_folder} folder:")
         for filename in os.listdir(input_folder):
@@ -86,5 +86,8 @@ if __name__ == "__main__":
     catalog_path = input("Please enter the name of the earthquake catalogue: ")
     input_file_path = os.path.join(input_folder, catalog_path)    
     latitudes, longitudes, magnitudes = read_earthquake_catalog(input_file_path)
-    plot_earthquakes_final_rounded_ticks(latitudes, longitudes, magnitudes)
-    print(f"Epicentral map saved to Figures/Map_epic.png")
+    output_file = os.path.join(proj.figures_dir, 'Map_epic.png')
+    plot_earthquakes_final_rounded_ticks(latitudes, longitudes, magnitudes, output_file)
+    print(f"Epicentral map saved to {output_file}")
+    proj.update("map.py", {"figures": {"epicentral_map": proj.rel(output_file)}},
+                catalogue=proj.rel(input_file_path))

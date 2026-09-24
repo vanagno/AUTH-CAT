@@ -19,11 +19,14 @@ rounded a second time.
 
 Verified against the Tyrnavos 2021 bulletin
 
+The outputs go in the project's Results folder, and the catalogue's extent
+and largest event are recorded in the project record (see ``project.py``).
+
 Usage
 -----
     python catalog.py                                  # interactive, as before
-    python catalog.py -i Input/tyrnavos.bul -f all
-    python catalog.py -i Input/tyrnavos.bul -f quakeml --no-picks
+    python catalog.py -p Arkal -f all                  # the project's own bulletin
+    python catalog.py -p Arkal -i other.bul -f quakeml --no-picks
 """
 
 from __future__ import annotations
@@ -38,6 +41,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Sequence
+
+from project import Project, open_project
 
 #: Kilometres per degree of latitude on a sphere of radius 6371 km. The
 #: bulletin gives horizontal uncertainties in km; QuakeML wants the
@@ -991,6 +996,49 @@ def write_quakeml(
 
 
 # --------------------------------------------------------------------------
+# the project record
+# --------------------------------------------------------------------------
+
+
+def catalogue_summary(events: Sequence[Event]) -> dict:
+    """The ``catalogue`` section of the project record.
+
+    Covers the events that have a magnitude -- those in the 6-column file.
+    """
+    rows = [(ev, m) for ev in events if (m := ev.magnitude()) is not None]
+    if not rows:
+        return {"total_events": 0}
+    big, big_mag = max(rows, key=lambda r: r[1].value)
+    times = [ev.origin_time for ev, _ in rows]
+    return {
+        "total_events": len(rows),
+        "start_time": min(times).isoformat(timespec="milliseconds"),
+        "end_time": max(times).isoformat(timespec="milliseconds"),
+        "latitude_min": min(ev.lat for ev, _ in rows),
+        "latitude_max": max(ev.lat for ev, _ in rows),
+        "longitude_min": min(ev.lon for ev, _ in rows),
+        "longitude_max": max(ev.lon for ev, _ in rows),
+        "depth_min_km": min(ev.depth for ev, _ in rows),
+        "depth_max_km": max(ev.depth for ev, _ in rows),
+        "magnitude_min": min(m.value for _, m in rows),
+        "magnitude_max": big_mag.value,
+        "largest_event": {
+            "time": big.origin_time.isoformat(timespec="milliseconds"),
+            "magnitude": big_mag.value,
+            "latitude": big.lat,
+            "longitude": big.lon,
+            "depth_km": big.depth,
+            "event_id": big.pubid,
+        },
+    }
+
+
+def _project_bulletin(proj: Project) -> str | None:
+    rel = proj.load()["project"]["bulletin_file"]
+    return str(proj.root / rel) if rel else None
+
+
+# --------------------------------------------------------------------------
 # plumbing
 # --------------------------------------------------------------------------
 
@@ -1057,11 +1105,21 @@ def main(argv: Sequence[str] | None = None) -> int:
         description="Convert a bulletin to the 11-column catalogue, the "
         "6-column analyst format and QuakeML 1.2."
     )
-    ap.add_argument("-i", "--input", help="bulletin file; prompts if omitted")
+    ap.add_argument(
+        "-p", "--project", help="project to work in; prompts if omitted (Enter = last used)"
+    )
+    ap.add_argument(
+        "-i",
+        "--input",
+        help="bulletin file; prompts if omitted, or takes the project's bulletin "
+        "when there is no terminal to ask on",
+    )
     ap.add_argument(
         "-f", "--format", choices=FORMATS, help="output format; prompts if omitted"
     )
-    ap.add_argument("-d", "--outdir", default="Results", help="output folder")
+    ap.add_argument(
+        "-d", "--outdir", help="output folder (default: the project's Results folder)"
+    )
     ap.add_argument(
         "--no-picks",
         dest="picks",
@@ -1077,11 +1135,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     interactive = sys.stdin.isatty()
+    proj = open_project(args.project)
     path = args.input
     if not path:
-        if not interactive:
-            ap.error("no --input given and no terminal to ask on")
-        path = _prompt_for_input()
+        if interactive:
+            path = _prompt_for_input(proj.input_dir)
+        else:
+            path = _project_bulletin(proj)
+            if not path:
+                ap.error("no --input given, no terminal to ask on and no bulletin "
+                         "in the project")
     if not os.path.isfile(path):
         print(f"The file {path} does not exist.", file=sys.stderr)
         return 1
@@ -1097,24 +1160,33 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
 
     stem = Path(path).stem
-    outdir = Path(args.outdir)
+    outdir = Path(args.outdir) if args.outdir else proj.results_dir
+    files = {}
     if fmt in ("classic", "all"):
-        print(write_classic(events, outdir / f"{stem}_cat.txt").summary())
+        out = outdir / f"{stem}_cat.txt"
+        print(write_classic(events, out).summary())
+        files["catalogue_file"] = proj.rel(out)
     if fmt in ("6col", "all"):
-        print(
-            write_sixcol(
-                events, outdir / f"{stem}_cat_6col.txt", legacy=args.legacy_6col
-            ).summary()
-        )
+        out = outdir / f"{stem}_cat_6col.txt"
+        print(write_sixcol(events, out, legacy=args.legacy_6col).summary())
+        files["catalogue_6col_file"] = proj.rel(out)
     if fmt in ("quakeml", "all"):
+        out = outdir / f"{stem}_cat.xml"
         print(
             write_quakeml(
                 events,
-                outdir / f"{stem}_cat.xml",
+                out,
                 picks=args.picks,
                 authority=args.authority,
             ).summary()
         )
+        files["catalogue_quakeml_file"] = proj.rel(out)
+    proj.update(
+        "catalog.py",
+        {"project": files, "catalogue": catalogue_summary(events)},
+        bulletin=proj.rel(path),
+        format=fmt,
+    )
     return 0
 
 

@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from project import open_project
 
 
 def read_catalog(file_path):
@@ -33,7 +34,7 @@ def read_catalog(file_path):
     return df.set_index('DateTime')
 
 
-def plot_magnitudes(df):
+def plot_magnitudes(df, output_file):
     plt.figure(figsize=(12, 6))
 
     sizes = df['Magnitude'] ** 2 * 10
@@ -59,17 +60,15 @@ def plot_magnitudes(df):
     plt.gcf().autofmt_xdate()
     plt.grid(False)
 
-    directory = 'Figures'
-    output_file = os.path.join(directory, 'M_time.png')
-
-    os.makedirs(directory, exist_ok=True)
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
     plt.savefig(output_file)
     plt.show()
 
 
 # Folder containing earthquake catalogues
-input_folder = "Results"
+proj = open_project()
+input_folder = proj.results_dir
 
 if os.path.isdir(input_folder):
     print(f"{input_folder} folder:")
@@ -93,7 +92,10 @@ df = read_catalog(input_file_path)
 
 
 # Create plot
-plot_magnitudes(df)
+output_file = os.path.join(proj.figures_dir, 'M_time.png')
+plot_magnitudes(df, output_file)
 
 
-print("Magnitudes vs time plot saved to Figures/M_time.png")
+print(f"Magnitudes vs time plot saved to {output_file}")
+proj.update("M_time.py", {"figures": {"magnitude_time": proj.rel(output_file)}},
+            catalogue=proj.rel(input_file_path))

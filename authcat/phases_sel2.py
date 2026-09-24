@@ -11,14 +11,17 @@ Reads either format written by ``phases.py`` and writes the same format back:
 The format is detected from the file, so the same answer to the same prompt
 works for both. Phase counts per station are computed from the file being
 filtered, which is what makes them consistent with the cut you are about to
-make; coordinates are extracted from ``Results/station_phases_counts.txt``
-(written by ``stations.py``) when it is present.
+make; coordinates are extracted from ``station_phases_counts.txt`` in the same
+folder (written by ``stations.py``) when it is present. Both files live in the
+project's Results folder (see ``project.py``).
 """
 
 from __future__ import annotations
 
 import os
 import re
+
+from project import open_project
 
 HYPO71_TERMINATOR = "                 10"
 
@@ -212,7 +215,8 @@ def read_and_filter_data(input_filename):
               f"({n_phases} P and S phases) from {len(counts)} stations "
               f"(HYPO71 format)")
 
-    coords = read_station_coordinates(os.path.join("Results", "station_phases_counts.txt"))
+    coords = read_station_coordinates(os.path.join(os.path.dirname(input_filename),
+                                                   "station_phases_counts.txt"))
     print_counts_table(counts, coords, input_filename)
 
     stations_input = input("Enter the station codes you want to keep (separated by commas): ")
@@ -230,11 +234,12 @@ def read_and_filter_data(input_filename):
     kept_lines = sum(len(p) for _, p in filtered)
     print(f"Kept {kept_lines} of {n_lines} {unit} in {len(filtered)} of "
           f"{len(events)} events")
-    return filtered, fmt
+    return filtered, fmt, desired_stations
 
 
 def main():
-    input_folder = "Results"
+    proj = open_project()
+    input_folder = proj.results_dir
     if os.path.isdir(input_folder):
         print(f"{input_folder} folder:")
         for filename in os.listdir(input_folder):
@@ -246,11 +251,14 @@ def main():
     if not os.path.isfile(input_file_path):
         raise SystemExit(f"error: {input_file_path} not found")
 
-    phase_data, fmt = read_and_filter_data(input_file_path)
-    output = os.path.join("Results",
+    phase_data, fmt, stations = read_and_filter_data(input_file_path)
+    output = os.path.join(input_folder,
                           "phase_sel.dat" if fmt == "hypodd" else "phases_sel.txt")
     write_filtered_data(output, phase_data, fmt)
     print(f"Phase list has been successfully updated to {output}")
+    proj.update("phases_sel2.py", {"phases": {"selection": {
+        "stations": stations, "file": proj.rel(output), "events": len(phase_data),
+    }}}, phase_list=proj.rel(input_file_path), format=fmt)
 
 
 if __name__ == "__main__":
