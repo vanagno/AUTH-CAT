@@ -16,15 +16,8 @@ written from that, so the outputs cannot disagree with each other -- the old
 pair could, because ``transform.py`` re-parsed ``bul.py``'s text output and
 rounded a second time.
 
-Nothing here needs a third-party package; QuakeML is built with
-``xml.etree.ElementTree``. The tests validate it against the QuakeML 1.2
-schema and read it back with ObsPy, but that is a test-only dependency.
 
-Verified against the Tyrnavos 2021 bulletin: ``write_classic`` reproduces
-``tyrnavos_cat.txt`` byte for byte, and ``write_sixcol(legacy=True)``
-reproduces ``tyrnavos_cat_6col.txt`` byte for byte. The default (non-legacy)
-6-column output differs from that file on six lines, where the original
-script's centisecond rounding was wrong -- see ``write_sixcol``.
+Verified against the Tyrnavos 2021 bulletin
 
 Usage
 -----
