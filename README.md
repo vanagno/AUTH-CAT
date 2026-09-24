@@ -3,7 +3,8 @@
 ## Projects
 
 Every analysis session is kept in its own project folder, so runs never overwrite each
-other. Run the scripts from the `authcat/` folder.
+other. The project folders live in `Projects/` at the top of the repository, next to
+`authcat/`, and the scripts find them from any folder they are run from.
 
 ```
 Projects/<name>/
@@ -16,7 +17,7 @@ Projects/<name>/
 ```
 
 Reference files shared by every project, such as the station list
-`regd.sta`, live in `authcat/Utilities/`.
+`regd.sta` and the report logo `LOGO.png`, live in `authcat/Utilities/`.
 ## Quickstart guide
 1. Start a project by downloading the bulletin for your target period and study area:
 
@@ -41,7 +42,7 @@ Reference files shared by every project, such as the station list
 
    ```
    python report.py                                # asks which project
-   python report.py Projects/Arkal/Arkal.json      # or name the project record
+   python report.py -p Arkal                       # or name the project
    ```
 
 

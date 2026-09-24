@@ -31,7 +31,7 @@ except ImportError as exc:
         "report.py requires ReportLab. Install it with: pip install reportlab"
     ) from exc
 
-from project import open_project
+from project import UTILITIES_DIR, open_project
 
 
 DEFAULT_REPORT_DIR = Path("Reports")
@@ -130,6 +130,27 @@ def unit_text(value: Any, suffix: str) -> str:
     if value is None:
         return "-"
     return f"{fmt(value)}{suffix}"
+
+
+def download_rows(bulletin: Any) -> list[list[Any]]:
+    """Rows for the period and area requested from getbul.py.
+
+    None for a bulletin imported with project.py, which records neither.
+    """
+    if not is_available(bulletin) or not bulletin.get("start_date"):
+        return []
+    bounds = bulletin.get("bounds")
+    if isinstance(bounds, dict):
+        area = (
+            f"Lat: {range_text(bounds.get('latitude_min'), bounds.get('latitude_max'), ' deg')}; "
+            f"Lon: {range_text(bounds.get('longitude_min'), bounds.get('longitude_max'), ' deg')}"
+        )
+    else:
+        area = "No geographic limits"
+    return [
+        ["Download period", range_text(bulletin.get("start_date"), bulletin.get("end_date"))],
+        ["Download area", area],
+    ]
 
 
 def resolve_project_path(project_root: Path, path_value: Any) -> Path | None:
@@ -384,6 +405,7 @@ def add_dataset_overview(
     overview_rows = [
         ["Project", fmt(project.get("name"))],
         ["Catalogue", fmt(project.get("catalogue_file"))],
+        *download_rows(data.get("bulletin")),
         ["Number of events", fmt(cat.get("total_events"))],
         ["Time period", time_period],
         ["Study area", coordinates],
@@ -570,9 +592,22 @@ def add_magnitude_analysis(
         stations = []
     stations_text = ", ".join(str(s) for s in stations) if stations else "-"
 
+    threshold = mag.get("residual_threshold")
+    flagged = mag.get("flagged_stations", [])
+    if not isinstance(flagged, list):
+        flagged = []
+    if threshold is None:
+        flagged_text = "-"
+    else:
+        flagged_text = ", ".join(str(s) for s in flagged) if flagged else "None"
+
     story.append(
         make_table(
-            [["Stations excluded from magnitude recomputation", stations_text]],
+            [
+                ["Residual threshold (|median residual|)", fmt(threshold)],
+                ["Stations above the threshold", flagged_text],
+                ["Stations excluded from magnitude recomputation", stations_text],
+            ],
             [7.2 * cm, CONTENT_WIDTH - 7.2 * cm],
         )
     )
@@ -632,6 +667,51 @@ def add_station_phases(
         "Seismic stations contributing phase picks.",
         styles,
     )
+
+
+def add_phase_files(
+    story: list[Any], data: dict[str, Any], styles: dict[str, ParagraphStyle]
+) -> None:
+    phases = data.get("phases", {})
+    if not is_available(phases):
+        return
+
+    add_section_heading(story, "Phase files", styles)
+
+    rows = [["Format", "File", "Events", "Phases"]]
+    for label, key in [("HypoDD", "hypodd"), ("HYPO71", "hypo71")]:
+        values = phases.get(key, {})
+        if isinstance(values, dict) and values.get("file"):
+            rows.append(
+                [
+                    label,
+                    fmt(values.get("file")),
+                    fmt(values.get("events")),
+                    fmt(values.get("phases")),
+                ]
+            )
+    if len(rows) > 1:
+        story.append(
+            make_header_table(rows, [3.4 * cm, 8.0 * cm, 3.0 * cm, 3.0 * cm])
+        )
+        story.append(Spacer(1, 8))
+
+    selection = phases.get("selection", {})
+    if isinstance(selection, dict) and selection.get("file"):
+        stations = selection.get("stations", [])
+        if not isinstance(stations, list):
+            stations = []
+        story.append(Paragraph("Station selection", styles["subsection"]))
+        story.append(
+            make_table(
+                [
+                    ["Stations kept", ", ".join(str(s) for s in stations) if stations else "-"],
+                    ["File", fmt(selection.get("file"))],
+                    ["Events", fmt(selection.get("events"))],
+                ],
+                [5.0 * cm, CONTENT_WIDTH - 5.0 * cm],
+            )
+        )
 
 
 def add_wadati(
@@ -705,6 +785,7 @@ def add_summary(
         ("Magnitude of completeness", "magnitude_of_completeness"),
         ("Magnitude analysis", "magnitude_regularization"),
         ("Seismic network and phases", "station_phases"),
+        ("Phase files", "phases"),
         ("Vp/Vs estimation", "wadati"),
         ("Modified Omori Law", "modified_omori"),
     ]
@@ -777,10 +858,10 @@ def build_pdf(data: dict[str, Any], project_root: Path, output_path: Path) -> No
     story: list[Any] = []
 
     # Dedicated cover page.
-    # LOGO.png is expected in the same directory as report.py.
+    # LOGO.png is expected in the Utilities folder next to report.py.
     story.append(Spacer(1, 2.0 * cm))
 
-    logo_path = Path(__file__).resolve().with_name("LOGO.png")
+    logo_path = UTILITIES_DIR / "LOGO.png"
     if logo_path.exists() and logo_path.is_file():
         try:
             logo = scaled_image_to_fit(logo_path, 9.0 * cm, 6.5 * cm)
@@ -811,6 +892,7 @@ def build_pdf(data: dict[str, Any], project_root: Path, output_path: Path) -> No
     add_mc(story, data, project_root, styles)
     add_magnitude_analysis(story, data, project_root, styles)
     add_station_phases(story, data, project_root, styles)
+    add_phase_files(story, data, styles)
     add_wadati(story, data, project_root, styles)
     add_omori(story, data, project_root, styles)
     add_summary(story, data, styles)
@@ -836,7 +918,12 @@ def parse_args() -> argparse.Namespace:
         nargs="?",
         default=None,
         help="Path to the project record, Projects/<name>/<name>.json "
-        "(default: asks which project, Enter = last used)",
+        "(default: the record of the project given with -p, or asks)",
+    )
+    parser.add_argument(
+        "-p",
+        "--project",
+        help="Project to report on (default: asks, Enter = last used)",
     )
     parser.add_argument(
         "--output-dir",
@@ -852,7 +939,7 @@ def main() -> None:
     if args.json_file:
         json_path = Path(args.json_file).resolve()
     else:
-        json_path = open_project().json_path.resolve()
+        json_path = open_project(args.project).json_path.resolve()
     data = load_json(json_path)
 
     # The project record sits at the top of its project folder,

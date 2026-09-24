@@ -1,0 +1,9 @@
+# Compiled Python
+__pycache__/
+*.py[cod]
+
+# The last project used; it changes with every run and differs per user
+Projects/.current
+
+# Files left half-written by an interrupted download or save
+*.part
