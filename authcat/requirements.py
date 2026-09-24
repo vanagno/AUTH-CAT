@@ -3,11 +3,8 @@ import importlib.metadata
 # Named as pip installs them
 modules_to_check = ['matplotlib', 'pandas', 'numpy', 'basemap','basemap-data-hires', 'cartopy', 'corner', 'emcee', 'scipy', 'reportlab', 'obspy']
 
-# Packages imported under a different name from the one pip installs
+# Packages imported under a different name from the one pip installs and data only packages
 import_names = {'basemap': 'mpl_toolkits.basemap'}
-
-# Data-only packages have nothing to import, so they are looked up by their
-# installed package record instead
 data_packages = {'basemap-data-hires'}
 
 def display_logo():
