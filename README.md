@@ -2,18 +2,18 @@
 
 ## Projects
 
-Every analysis is kept in its own project folder, so runs never overwrite each
+Every analysis session is kept in its own project folder, so runs never overwrite each
 other. Run the scripts from the `authcat/` folder.
 
 ```
 Projects/<name>/
-    <name>.json   project record: the results of every script, and a history of runs
-    Input/        the bulletin
-    Results/      catalogues, phase lists, summaries
-    Figures/      plots
-    Magnitudes/   station magnitude lists and their plot
+    <name>.json   project record: the results of every script, and a history of runs. Acts as a diary for the whole workflow
+    Input/        where the bulletin is stored
+    Results/      catalogues, phase lists, summaries all outputs from AUTH-CAT scripts
+    Figures/      plots and maps
+    Magnitudes/   station magnitude lists and their plots
 ```
-
+Quickstart
 1. Start a project by downloading its bulletin:
 
    ```
