@@ -13,27 +13,26 @@ Projects/<name>/
     Figures/      plots and maps
     Magnitudes/   station magnitude lists and their plots
 ```
-Quickstart
-1. Start a project by downloading its bulletin:
+## Quickstart guide
+1. Start a project by downloading the bulletin for your target period and study area:
 
    ```
-   python getbul.py                    # asks for the project name, dates and area
-   python getbul.py -p Arkal --start 2021-06-01 --end 2022-12-31
+   python getbul.py                    # asks for the project name, date range and lat/lon boundaries. Direct input in the command line
+   python getbul.py -p Arkal --start 2021-06-01 --end 2022-12-31 --min-lat 35.0 --max-lat 35.3 --min-lon 25.1 --max-lon 25.4 # Without further command line interaction
    ```
 
-   or from a bulletin you already have:
+   or from a bulletin you already have (currently supports only AUTOLOC3 format):
 
    ```
    python project.py Arkal --bulletin Input/Arkal.bul
    ```
 
-2. Run the other scripts as before. Each one first asks which project to work
-   on (Enter takes the last one used), reads its input from that project and
+2. Run the desired scripts. Each one first asks which project to work
+   on (pressing Enter takes the last one used), reads its input from that project and
    writes its output there. When input is piped in by a batch script, the last
    project used is taken without asking. `catalog.py` and `phases2.py` also
    accept `-p/--project`.
 
-`python project.py` with no arguments lists the projects.
 
 The project record follows the layout in `project.py` (`TEMPLATE`). A section
 reads `"available": false` until the script that fills it has run, paths are
