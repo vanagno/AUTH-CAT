@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from project import open_project
+from project import open_project, shown
 
 
 def read_catalog(file_path):
@@ -71,12 +71,12 @@ proj = open_project()
 input_folder = proj.results_dir
 
 if os.path.isdir(input_folder):
-    print(f"{input_folder} folder:")
+    print(f"{shown(input_folder)} folder:")
 
     for filename in os.listdir(input_folder):
         print(filename)
 else:
-    print(f"The folder {input_folder} does not exist.")
+    print(f"The folder {shown(input_folder)} does not exist.")
 
 
 # Ask user which catalogue to process
@@ -96,6 +96,6 @@ output_file = os.path.join(proj.figures_dir, 'M_time.png')
 plot_magnitudes(df, output_file)
 
 
-print(f"Magnitudes vs time plot saved to {output_file}")
+print(f"Magnitudes vs time plot saved to {shown(output_file)}")
 proj.update("M_time.py", {"figures": {"magnitude_time": proj.rel(output_file)}},
             catalogue=proj.rel(input_file_path))

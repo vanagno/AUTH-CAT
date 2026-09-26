@@ -3,18 +3,18 @@ import pandas as pd
 import math
 import matplotlib.pyplot as plt
 import os
-from project import open_project
+from project import open_project, shown
 
 plt.rcParams["figure.figsize"] = (8, 5)
 
 proj = open_project()
 input_folder = proj.results_dir
 if os.path.isdir(input_folder):
-    print(f"{input_folder} folder:")
+    print(f"{shown(input_folder)} folder:")
     for filename in os.listdir(input_folder):
         print(filename)
 else:
-    print(f"The folder {input_folder} does not exist.")
+    print(f"The folder {shown(input_folder)} does not exist.")
 file_path = input("Please enter the file path of the 6-column earthquake catalogue: ") 
 input_file_path = os.path.join(input_folder, file_path)    
 catalog = pd.read_csv(input_file_path, sep=r"\s+", header=None, usecols=[5])
@@ -48,7 +48,7 @@ output_file = os.path.join(directory,'FMD_plot.png')
 os.makedirs(directory, exist_ok=True)
 plt.savefig(output_file)
 plt.show()
-print(f"Frequency-Magnitude distribution plot saved to {output_file}")
+print(f"Frequency-Magnitude distribution plot saved to {shown(output_file)}")
 
 
 #---------- b-value estimation with the maximum likelihood method  -------#
@@ -105,7 +105,7 @@ output_file = os.path.join(directory,'MAXC.png')
 os.makedirs(directory, exist_ok=True)
 plt.savefig(output_file)
 plt.show()
-print(f"MAXC plot saved to {output_file}")
+print(f"MAXC plot saved to {shown(output_file)}")
 
 #---------------- Mc estimation with the GFT method ----------------------#
 
@@ -162,7 +162,7 @@ output_file = os.path.join(directory,'GFT_plot.png')
 os.makedirs(directory, exist_ok=True)
 plt.savefig(output_file)
 plt.show()
-print(f"Goodness-of-Fit residual plot saved to {output_file}")
+print(f"Goodness-of-Fit residual plot saved to {shown(output_file)}")
 
 cat_mc = cat_gft[0] # GFT completeness magnitude
 cat_a, cat_b, cat_aki_unc, cat_shibolt_unc = b_est(mag = catalog['mw'], mbin = 0.1, mc = cat_mc)
@@ -183,7 +183,7 @@ output_file = os.path.join(directory,'GFT.png')
 os.makedirs(directory, exist_ok=True)
 plt.savefig(output_file)
 plt.show()
-print(f"Goodness-of-Fit plot saved to {output_file}")
+print(f"Goodness-of-Fit plot saved to {shown(output_file)}")
 
 #---------------- Mc estimation with the MBS method ----------------------#
 
@@ -242,7 +242,7 @@ output_file = os.path.join(directory,'MBS_plot.png')
 os.makedirs(directory, exist_ok=True)
 plt.savefig(output_file)
 plt.show()
-print(f"b-value stability plot saved to {output_file}")
+print(f"b-value stability plot saved to {shown(output_file)}")
 
 cat_mc = cat_mbs[0]
 cat_a, cat_b, cat_aki_unc, cat_shibolt_unc = b_est(mag = catalog['mw'], mbin = 0.1, mc = cat_mc)
@@ -265,7 +265,7 @@ output_file = os.path.join(directory,'MBS.png')
 os.makedirs(directory, exist_ok=True)
 plt.savefig(output_file)
 plt.show()
-print(f"MBS plot saved to {output_file}")
+print(f"MBS plot saved to {shown(output_file)}")
 
 summary_text = f"""
 Summary of Mc analysis and b-values
@@ -287,7 +287,7 @@ summary_file_path = os.path.join(input_folder, "Mc_summary.txt")
 with open(summary_file_path, 'w') as summary_file:
     summary_file.write(summary_text)
 
-print(f"Summary of Mc analysis saved to {summary_file_path}")
+print(f"Summary of Mc analysis saved to {shown(summary_file_path)}")
 
 figure_names = {"fmd": "FMD_plot.png", "maxc": "MAXC.png", "gft_residuals": "GFT_plot.png",
                 "gft": "GFT.png", "mbs_stability": "MBS_plot.png", "mbs": "MBS.png"}

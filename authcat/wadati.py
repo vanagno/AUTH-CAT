@@ -3,7 +3,7 @@ import numpy as np
 from datetime import datetime
 from scipy.odr import Model, ODR, RealData
 import os
-from project import open_project
+from project import open_project, shown
 
 def parse_earthquake_data(bulletin_text):
     lines = bulletin_text.strip().split('\n')
@@ -103,11 +103,11 @@ def main():
     proj = open_project()
     input_folder = proj.input_dir
     if os.path.isdir(input_folder):
-        print(f"{input_folder} folder:")
+        print(f"{shown(input_folder)} folder:")
         for filename in os.listdir(input_folder):
             print(filename)
     else:
-        print(f"The folder {input_folder} does not exist.")    
+        print(f"The folder {shown(input_folder)} does not exist.")    
     bulletin_path = input("Please enter the name of the earthquake bulletin file: ")
     input_file_path = os.path.join(input_folder, bulletin_path)    
     with open(input_file_path, 'r') as file:
@@ -115,7 +115,7 @@ def main():
     p_travel_times, sp_diff_times, header = compute_travel_times(parse_earthquake_data(bulletin_text))
     output_file = os.path.join(proj.figures_dir, 'Wadati.png')
     vpvs_ls, vpvs_or = plot_travel_times(p_travel_times, sp_diff_times, output_file)
-    print(f"Wadati diagram saved to {output_file}")
+    print(f"Wadati diagram saved to {shown(output_file)}")
     proj.update("wadati.py", {"wadati": {
         "pairs": len(p_travel_times),
         "vp_vs": {"least_squares": round(float(vpvs_ls), 2),

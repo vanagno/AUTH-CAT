@@ -35,7 +35,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Sequence
 
-from project import Project, open_project
+from project import Project, open_project, shown
 
 #: Kilometres per degree of latitude on a sphere of radius 6371 km. The
 #: bulletin gives horizontal uncertainties in km; QuakeML wants the
@@ -232,7 +232,7 @@ class WriteReport:
                 f"{self.centisecond_ties} origin times exactly halfway between "
                 f"centiseconds, rounded up"
             )
-        return f"{self.path}: " + ", ".join(parts)
+        return f"{shown(self.path)}: " + ", ".join(parts)
 
 
 # --------------------------------------------------------------------------
@@ -1067,17 +1067,17 @@ _FORMAT_ANSWERS = {
 
 def _prompt_for_input(folder: str = "Input") -> str:
     if os.path.isdir(folder):
-        print(f"{folder} folder:")
+        print(f"{shown(folder)} folder:")
         for name in sorted(os.listdir(folder)):
             print(f"    {name}")
     else:
-        print(f"The folder {folder} does not exist.")
+        print(f"The folder {shown(folder)} does not exist.")
     while True:
         name = input("Enter the name of the earthquake bulletin file: ").strip()
         path = os.path.join(folder, name) if name else ""
         if path and os.path.isfile(path):
             return path
-        print(f"    {path or '(nothing entered)'} is not a file -- try again.")
+        print(f"    {shown(path) if path else '(nothing entered)'} is not a file -- try again.")
 
 
 def _prompt_for_format() -> str:
@@ -1147,7 +1147,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         fmt = _prompt_for_format() if interactive else "all"
 
     events, rr = read_bulletin(path)
-    print(f"\nRead {rr.summary()} from {path}")
+    print(f"\nRead {rr.summary()} from {shown(path)}")
     if not events:
         print("Nothing to write.", file=sys.stderr)
         return 1

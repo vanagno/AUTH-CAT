@@ -132,6 +132,13 @@ TEMPLATE = {
         "modified_magnitudes_file": None,
         "modified_catalogue_file": None,
         "figure": None,
+        "bland_altman": {
+            "figure": None,
+            "events": None,
+            "mean_difference": None,
+            "lower_limit": None,
+            "upper_limit": None,
+        },
     },
     "station_phases": {
         "available": False,
@@ -156,7 +163,9 @@ TEMPLATE = {
     "modified_omori": {
         "available": False,
         "fit_start": None,
+        "fit_end": None,
         "start_time": None,
+        "end_time": None,
         "events": None,
         "K": None,
         "c": None,
@@ -304,12 +313,25 @@ class Project:
             entry["details"] = _plain(details)
         record["history"].append(entry)
         self._write(record)
-        print(f"Results recorded in {self.json_path}")
+        # print(f"Results recorded in {shown(self.json_path)}")
 
     def make_current(self) -> None:
         """Offer this project as the default the next time a script asks."""
         self.base.mkdir(parents=True, exist_ok=True)
         (self.base / _CURRENT_FILE).write_text(self.name + "\n", encoding="utf-8")
+
+
+def shown(path: str | os.PathLike) -> str:
+    """``path`` as messages show it: from its project folder down, e.g.
+    ``Figures/Wadati.png``. Paths outside every project are shown as given."""
+    full = Path(path).resolve()
+    try:
+        parts = full.relative_to(PROJECTS_DIR.resolve()).parts
+    except ValueError:
+        return str(path)
+    if len(parts) < 2:
+        return f"{PROJECTS_DIR.name}/{'/'.join(parts)}"
+    return Path(*parts[1:]).as_posix()
 
 
 def list_projects(base: str | os.PathLike = PROJECTS_DIR) -> list[str]:
@@ -380,7 +402,7 @@ def open_project(name: str | None = None, base: str | os.PathLike = PROJECTS_DIR
         )
     proj.create()  # restores any subfolder deleted by hand
     proj.make_current()
-    print(f"Project: {proj.name}  ({proj.root}/)\n")
+    print(f"Project: {proj.name}  ({PROJECTS_DIR.name}/{proj.name}/)\n")
     return proj
 
 
@@ -421,7 +443,7 @@ def main(argv: list[str] | None = None) -> int:
     shutil.copyfile(src, dest)
     with open(dest, encoding="utf-8", errors="replace") as fh:
         n_events = sum(1 for line in fh if line.startswith("Event:"))
-    print(f"Copied {src} ({n_events} events) to {dest}")
+    print(f"Copied {src} ({n_events} events) to {shown(dest)}")
     proj.update(
         "project.py",
         {

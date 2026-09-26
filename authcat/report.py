@@ -31,7 +31,7 @@ except ImportError as exc:
         "report.py requires ReportLab. Install it with: pip install reportlab"
     ) from exc
 
-from project import UTILITIES_DIR, open_project
+from project import UTILITIES_DIR, open_project, shown
 
 
 DEFAULT_REPORT_DIR = Path("Reports")
@@ -604,7 +604,7 @@ def add_magnitude_analysis(
     story.append(
         make_table(
             [
-                ["Residual threshold (|median residual|)", fmt(threshold)],
+                ["Residual threshold (abs median residual)", fmt(threshold)],
                 ["Stations above the threshold", flagged_text],
                 ["Stations excluded from magnitude recomputation", stations_text],
             ],
@@ -620,6 +620,30 @@ def add_magnitude_analysis(
         "Magnitude residual analysis by seismic station.",
         styles,
     )
+
+    bland_altman = mag.get("bland_altman", {})
+    if isinstance(bland_altman, dict) and bland_altman.get("figure"):
+        story.append(Paragraph("Original versus recomputed magnitudes", styles["subsection"]))
+        story.append(
+            make_table(
+                [
+                    ["Events compared", fmt(bland_altman.get("events"))],
+                    ["Mean difference (recomputed - original)", fmt(bland_altman.get("mean_difference"))],
+                    [
+                        "95% limits of agreement",
+                        f"{fmt(bland_altman.get('lower_limit'))} to {fmt(bland_altman.get('upper_limit'))}",
+                    ],
+                ],
+                [7.2 * cm, CONTENT_WIDTH - 7.2 * cm],
+            )
+        )
+        add_image(
+            story,
+            project_root,
+            bland_altman.get("figure"),
+            "Bland-Altman plot of original and recomputed event magnitudes.",
+            styles,
+        )
 
 
 def add_station_phases(
@@ -760,6 +784,7 @@ def add_omori(
 
     rows = [
         ["Fit start", fmt(omori.get("fit_start"))],
+        ["Fit end", fmt(omori.get("fit_end"))],
         ["K", fmt(omori.get("K"))],
         ["c", fmt(omori.get("c"))],
         ["p", fmt(omori.get("p"))],
@@ -963,7 +988,7 @@ def main() -> None:
     output_path = output_dir / f"{safe_name}_report.pdf"
     build_pdf(data, project_root, output_path)
 
-    print(f"AUTH-CAT PDF report written to: {output_path}")
+    print(f"AUTH-CAT PDF report written to: {shown(output_path)}")
 
 
 if __name__ == "__main__":

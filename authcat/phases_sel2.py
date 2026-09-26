@@ -24,7 +24,7 @@ from __future__ import annotations
 import os
 import re
 
-from project import open_project
+from project import open_project, shown
 
 HYPO71_TERMINATOR = "                 10"
 
@@ -148,7 +148,7 @@ def print_counts_table(counts, coords, source):
     order = [(sta, counts[sta]) for sta in rank_by_p(counts)]
     show_coords = any(sta in coords for sta in counts)
 
-    print(f"\nPhases per station in {source}:\n")
+    print(f"\nPhases per station in {shown(source)}:\n")
     if show_coords:
         head = f"  {'STA':<6} {'LAT':>9} {'LON':>9} {'P':>7} {'S':>7} {'TOTAL':>8}"
         rule = f"  {'-' * 6} {'-' * 9} {'-' * 9} {'-' * 7} {'-' * 7} {'-' * 8}"
@@ -244,7 +244,7 @@ def read_and_filter_data(input_filename):
     unknown = sorted(desired_stations - set(counts))
     if unknown:
         
-        print(f"warning: not present in {input_filename}: {', '.join(unknown)}")
+        print(f"warning: not present in {shown(input_filename)}: {', '.join(unknown)}")
 
     filtered = filter_events(events, desired_stations, fmt)
     kept_lines = sum(len(p) for _, p in filtered)
@@ -257,11 +257,11 @@ def main():
     proj = open_project()
     input_folder = proj.results_dir
     if os.path.isdir(input_folder):
-        print(f"{input_folder} folder:")
+        print(f"{shown(input_folder)} folder:")
         for filename in os.listdir(input_folder):
             print(filename)
     else:
-        print(f"The folder {input_folder} does not exist.")
+        print(f"The folder {shown(input_folder)} does not exist.")
     file_path = input("Please provide the phases list (should be phases.txt for HYPO71 or phase.dat for HYPODD formats if not renamed): ")
     input_file_path = os.path.join(input_folder, file_path)
     if not os.path.isfile(input_file_path):
@@ -271,7 +271,7 @@ def main():
     output = os.path.join(input_folder,
                           "phase_sel.dat" if fmt == "hypodd" else "phases_sel.txt")
     write_filtered_data(output, phase_data, fmt)
-    print(f"Phase list has been successfully updated to {output}")
+    print(f"Phase list has been successfully updated to {shown(output)}")
     proj.update("phases_sel2.py", {"phases": {"selection": {
         "stations": stations, "file": proj.rel(output), "events": len(phase_data),
     }}}, phase_list=proj.rel(input_file_path), format=fmt)

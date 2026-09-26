@@ -32,7 +32,7 @@ import time
 import urllib.error
 import urllib.request
 
-from project import Project
+from project import Project, shown
 
 DEFAULT_BASE_URL = "https://seismo.auth.gr/wp-content/uploads/CATALOGS"
 USER_AGENT = "auth-bulletin-downloader/2.0 (+python-urllib)"
@@ -440,7 +440,7 @@ def main(argv=None):
 
     os.replace(out_tmp, args.output)
 
-    print("\nWrote %s (%d bytes)" % (args.output, n_bytes))
+    print("\nWrote %s (%d bytes)" % (shown(args.output), n_bytes))
     print("  monthly files: downloaded %d   from cache %d   missing %d   failed %d"
           % (downloaded, cached, len(missing), len(failed)))
     print("  events examined: %d" % events_examined)

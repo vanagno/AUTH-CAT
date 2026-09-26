@@ -53,7 +53,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import numpy as np
 import os
-from project import open_project, UTILITIES_DIR
+from project import open_project, shown, UTILITIES_DIR
 
 def generate_stations_map(counts, station_coordinates, output_map_path):
     p_phase_counts = [phases['P'] for phases in counts.values()]
@@ -78,17 +78,17 @@ def generate_stations_map(counts, station_coordinates, output_map_path):
     plt.title('Seismic stations used')
     plt.savefig(output_map_path, dpi=400)
     plt.show()
-    print(f"Map of the seismic stations used is saved to {output_map_path}")
+    print(f"Map of the seismic stations used is saved to {shown(output_map_path)}")
 
 regd_sta_file_path = os.path.join(UTILITIES_DIR, 'regd.sta')
 proj = open_project()
 input_folder = proj.input_dir
 if os.path.isdir(input_folder):
-    print(f"{input_folder} folder:")
+    print(f"{shown(input_folder)} folder:")
     for filename in os.listdir(input_folder):
         print(filename)
 else:
-    print(f"The folder {input_folder} does not exist.")
+    print(f"The folder {shown(input_folder)} does not exist.")
 
 file_path = input("Please provide the name of the earthquake bulletin: ")
 input_file_path = os.path.join(input_folder, file_path)    
@@ -103,7 +103,7 @@ phase_arrivals = parse_phase_arrivals_v2(input_file_path)
 counts = count_phases(phase_arrivals)
 
 write_output_file(counts, station_coordinates, output_file_path)
-print(f"List of the number of P- and S-phases recorded for each station is saved to {output_file_path}")
+print(f"List of the number of P- and S-phases recorded for each station is saved to {shown(output_file_path)}")
 
 generate_stations_map(counts, station_coordinates, output_map_path)
 

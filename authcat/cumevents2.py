@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from project import open_project
+from project import open_project, shown
 
 COLUMNS = ['Year', 'Stamp', 'Latitude', 'Longitude', 'Depth', 'Magnitude']
 
@@ -71,7 +71,7 @@ def calculate_cumulative_earthquakes(file_path, mc=None, figures_dir='Figures'):
     os.makedirs(directory, exist_ok=True)
     fig.savefig(output_file)
     plt.show()
-    print(f"Cumulative earthquakes plot saved to {output_file}")
+    print(f"Cumulative earthquakes plot saved to {shown(output_file)}")
 
     return df, filtered_df
 
@@ -89,18 +89,18 @@ def prompt_for_mc():
 def prompt_for_input(folder):
     """List the folder and ask for a file in it, re-asking until one exists."""
     if os.path.isdir(folder):
-        print(f"\n{folder} folder:")
+        print(f"\n{shown(folder)} folder:")
         for filename in sorted(os.listdir(folder)):
             print(f"    {filename}")
     else:
-        print(f"The folder {folder} does not exist.")
+        print(f"The folder {shown(folder)} does not exist.")
 
     while True:
         name = input("Please provide the name of the 6-column catalogue: ").strip()
         path = os.path.join(folder, name)
         if os.path.isfile(path):
             return path
-        print(f"{path} is not a file; please try again")
+        print(f"{shown(path)} is not a file; please try again")
 
 
 if __name__ == "__main__":

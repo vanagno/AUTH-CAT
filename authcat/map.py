@@ -3,7 +3,7 @@ from matplotlib.patches import Patch
 from mpl_toolkits.basemap import Basemap
 import numpy as np
 import os
-from project import open_project
+from project import open_project, shown
 
 def read_earthquake_catalog(file_path):
     """
@@ -78,16 +78,16 @@ if __name__ == "__main__":
     proj = open_project()
     input_folder = proj.results_dir
     if os.path.isdir(input_folder):
-        print(f"{input_folder} folder:")
+        print(f"{shown(input_folder)} folder:")
         for filename in os.listdir(input_folder):
             print(filename)
     else:
-    	print(f"The folder {input_folder} does not exist.")
+    	print(f"The folder {shown(input_folder)} does not exist.")
     catalog_path = input("Please enter the name of the earthquake catalogue: ")
     input_file_path = os.path.join(input_folder, catalog_path)    
     latitudes, longitudes, magnitudes = read_earthquake_catalog(input_file_path)
     output_file = os.path.join(proj.figures_dir, 'Map_epic.png')
     plot_earthquakes_final_rounded_ticks(latitudes, longitudes, magnitudes, output_file)
-    print(f"Epicentral map saved to {output_file}")
+    print(f"Epicentral map saved to {shown(output_file)}")
     proj.update("map.py", {"figures": {"epicentral_map": proj.rel(output_file)}},
                 catalogue=proj.rel(input_file_path))

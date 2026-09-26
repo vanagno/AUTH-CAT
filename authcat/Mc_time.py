@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import convolve
-from project import open_project
+from project import open_project, shown
 
 def read_catalog(file_path):
     df = pd.read_csv(file_path, sep=r"\s+", skiprows=1, 
@@ -35,16 +35,16 @@ def plot_mc(times, mc_values, filtered_mc_values, output_file):
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     plt.savefig(output_file)     
     plt.show()
-    print(f"Mc vs time plot saved to {output_file}")
+    print(f"Mc vs time plot saved to {shown(output_file)}")
 
 proj = open_project()
 input_folder = proj.results_dir
 if os.path.isdir(input_folder):
-    print(f"{input_folder} folder:")
+    print(f"{shown(input_folder)} folder:")
     for filename in os.listdir(input_folder):
     	print(filename)
 else:
-    print(f"The folder {input_folder} does not exist.")
+    print(f"The folder {shown(input_folder)} does not exist.")
 file_path = input("Please enter the name of the earthquake catalogue: ") 
 input_file_path = os.path.join(input_folder, file_path)    
 

@@ -4,7 +4,7 @@ import sys
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import numpy as np
-from project import open_project
+from project import open_project, shown
 
 FLAG_COLOR = 'purple'
 
@@ -96,7 +96,7 @@ def calculate_median_residuals(earthquake_data):
 
 
 def ask_residual_threshold():
-    """Ask for the |median residual| above which a station is flagged.
+    """Ask for the abs median residual above which a station is flagged.
 
     Blank means no threshold. Asked only at a terminal, so a batch script
     piping in its answers is not thrown out of step by the extra question.
@@ -105,7 +105,7 @@ def ask_residual_threshold():
         return None
     while True:
         try:
-            answer = input("Residual threshold: highlight stations whose |median residual| "
+            answer = input("Residual threshold: highlight stations whose abs median residual "
                            "exceeds (e.g. 0.3, blank = none): ").strip()
         except EOFError:
             return None
@@ -120,7 +120,7 @@ def ask_residual_threshold():
 def plot_station_data(station_counts, median_residuals, output_file, residual_threshold=None):
     """Plot median residual and observation count per station.
 
-    Stations whose |median residual| exceeds `residual_threshold` are drawn in
+    Stations whose abs median residual exceeds `residual_threshold` are drawn in
     FLAG_COLOR in both panels, and returned so they can be offered for
     elimination.
     """
@@ -158,12 +158,12 @@ def plot_station_data(station_counts, median_residuals, output_file, residual_th
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     plt.savefig(output_file, dpi=400) 
     plt.show()
-    print(f"Median residual magnitudes plot saved to {output_file}")
+    print(f"Median residual magnitudes plot saved to {shown(output_file)}")
     if flagged:
-        print(f"Stations with |median residual| > {residual_threshold:g}: "
+        print(f"Stations with abs median residual > {residual_threshold:g}: "
               + ", ".join(f"{station} ({median_residuals[station]:+.2f})" for station in flagged))
     elif residual_threshold is not None:
-        print(f"No station has |median residual| > {residual_threshold:g}")
+        print(f"No station has abs median residual > {residual_threshold:g}")
     return flagged
 
 
@@ -237,11 +237,74 @@ def compute_and_append_mean_magnitudes(directory, filename):
         print(f"Failed to process the file: {e}")
 
 
+def plot_bland_altman(modified_path, output_file):
+    """Bland-Altman plot of each event's original magnitude against the one
+    recomputed without the eliminated stations.
+
+    x is the mean of the two magnitudes and y their difference (recomputed -
+    original). The solid line is the mean difference and the dashed lines the
+    95% limits of agreement, mean difference +/- 1.96 standard deviations.
+    Events left with no station magnitude, whose recomputed value is missing,
+    are left out. Returns the numbers for the project record, or None when
+    fewer than two events can be compared.
+    """
+    original, recomputed = [], []
+    with open(modified_path, 'r') as file:
+        for line in file:
+            parts = line.split()
+            if len(parts) == 3 and parts[0].startswith('auth'):
+                try:
+                    pair = (float(parts[1]), float(parts[2]))
+                except ValueError:
+                    continue
+                if np.isfinite(pair).all():
+                    original.append(pair[0])
+                    recomputed.append(pair[1])
+    if len(original) < 2:
+        print("Too few events with a recomputed magnitude for a Bland-Altman plot")
+        return None
+
+    original, recomputed = np.array(original), np.array(recomputed)
+    means = (original + recomputed) / 2
+    diffs = recomputed - original
+    bias = diffs.mean()
+    sd = diffs.std(ddof=1)
+    lower, upper = bias - 1.96 * sd, bias + 1.96 * sd
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.scatter(means, diffs, s=18, color='royalblue', edgecolor='white', linewidth=0.4, alpha=0.7)
+    ax.axhline(0, color='grey', linewidth=0.8, linestyle=':')
+    ax.axhline(bias, color='black', linewidth=1.2)
+    for level in (lower, upper):
+        ax.axhline(level, color=FLAG_COLOR, linewidth=1, linestyle='--')
+    # Lines labelled at their right-hand end rather than in a legend
+    for level, text in ((upper, f'+1.96 SD: {upper:+.3f}'), (bias, f'Mean: {bias:+.3f}'),
+                        (lower, f'-1.96 SD: {lower:+.3f}')):
+        ax.text(1.01, level, text, transform=ax.get_yaxis_transform(), va='center', ha='left', fontsize=9)
+    ax.set_title(f'Bland-Altman plot: original vs recomputed magnitudes ({len(diffs)} events)')
+    ax.set_xlabel('Mean of original and recomputed magnitude')
+    ax.set_ylabel('Recomputed - original magnitude')
+    plt.tight_layout()
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    plt.savefig(output_file, dpi=400)
+    plt.show()
+    print(f"Bland-Altman plot saved to {shown(output_file)}")
+    return {
+        "figure": output_file,
+        "events": len(diffs),
+        "mean_difference": round(float(bias), 3),
+        "lower_limit": round(float(lower), 3),
+        "upper_limit": round(float(upper), 3),
+    }
+
+
 def user_interaction(directory, flagged=()):
     """Offer to recompute magnitudes without some stations.
 
-    Returns the stations eliminated, or None when the user declines. A blank
-    answer to the station question takes the flagged stations.
+    Returns the stations eliminated (None when the user declines) and the
+    Bland-Altman numbers comparing original and recomputed magnitudes (None
+    unless mean magnitudes were computed). A blank answer to the station
+    question takes the flagged stations.
     """
     response = input("Do you want to recompute magnitudes? (yes/no): ").lower()
     if response == 'yes':
@@ -255,22 +318,25 @@ def user_interaction(directory, flagged=()):
         modify_output_file(directory, "magnitudes.txt", "modified_magnitudes.txt", stations_to_eliminate)
         print("Updated the output file by removing specified stations.")
 
+        bland_altman = None
         if input("Do you want to compute mean magnitudes for each event? (yes/no): ").lower() == 'yes':
             compute_and_append_mean_magnitudes(directory, "modified_magnitudes.txt")
-            print(f"New mean magnidutes were computed and written to {os.path.join(directory, 'modified_magnitudes.txt')}")
-        return stations_to_eliminate
-    return None
+            print(f"New mean magnidutes were computed and written to {shown(os.path.join(directory, 'modified_magnitudes.txt'))}")
+            bland_altman = plot_bland_altman(os.path.join(directory, "modified_magnitudes.txt"),
+                                             os.path.join(directory, "bland_altman.png"))
+        return stations_to_eliminate, bland_altman
+    return None, None
 
 def main():
     proj = open_project()
     directory = proj.magnitudes_dir
     input_folder = proj.input_dir
     if os.path.isdir(input_folder):
-        print(f"{input_folder} folder:")
+        print(f"{shown(input_folder)} folder:")
         for filename in os.listdir(input_folder):
              print(filename)
     else:
-    	print(f"The folder {input_folder} does not exist.")
+    	print(f"The folder {shown(input_folder)} does not exist.")
     file_path = input("Enter the path to the earthquake bulletin file: ")
     input_file_path = os.path.join(input_folder, file_path)    
     output_file = 'magnitudes.txt'
@@ -283,7 +349,7 @@ def main():
     figure = os.path.join(directory, 'magnitudes.png')
     flagged = plot_station_data(station_counts, median_residuals, figure, residual_threshold)
 
-    excluded = user_interaction(directory, flagged)
+    excluded, bland_altman = user_interaction(directory, flagged)
 
     section = {
         "residual_threshold": residual_threshold,
@@ -294,6 +360,9 @@ def main():
     if excluded is not None:
         section["excluded_stations"] = excluded
         section["modified_magnitudes_file"] = proj.rel(os.path.join(directory, "modified_magnitudes.txt"))
+    if bland_altman is not None:
+        bland_altman["figure"] = proj.rel(bland_altman["figure"])
+        section["bland_altman"] = bland_altman
     proj.update("magnitudes.py", {"magnitude_regularization": section}, bulletin=proj.rel(input_file_path))
 
 if __name__ == "__main__":

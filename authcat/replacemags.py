@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from project import open_project
+from project import open_project, shown
 
 def update_catalog_with_modified_magnitudes(catalog_path, modified_magnitudes_path, output_path):
     """Write the catalogue with the recomputed magnitudes; return how many
@@ -42,7 +42,7 @@ def update_catalog_with_modified_magnitudes(catalog_path, modified_magnitudes_pa
         with open(output_path, 'w') as file:
             file.writelines(new_catalog)
 
-        print("Catalog has been updated with modified magnitudes and saved to", output_path)
+        print("Catalog has been updated with modified magnitudes and saved to", shown(output_path))
 #        print ("You can now run transform.py if you prefer the 6-column format")
         return updated
     except Exception as e:
@@ -52,22 +52,22 @@ def main():
     proj = open_project()
     input_folder = proj.results_dir
     if os.path.isdir(input_folder):
-        print(f"{input_folder} folder:")
+        print(f"{shown(input_folder)} folder:")
         for filename in os.listdir(input_folder):
             print(filename)
     else:
-        print(f"The folder {input_folder} does not exist.")
+        print(f"The folder {shown(input_folder)} does not exist.")
         
     catalog_path = input("Please provide the name of the initial catalogue: ")
     input_file_path = os.path.join(input_folder, catalog_path)
     
     mag_folder = proj.magnitudes_dir
     if os.path.isdir(mag_folder):
-        print(f"{mag_folder} folder:")
+        print(f"{shown(mag_folder)} folder:")
         for filename in os.listdir(mag_folder):
             print(filename)
     else:
-        print(f"The folder {mag_folder} does not exist.")
+        print(f"The folder {shown(mag_folder)} does not exist.")
         
     modified_magnitudes_path = input("Great! Now provide the modified mean magnitudes file\n(should be modified_magnitudes.txt if not renamed): ")
     mag_file_path = os.path.join(mag_folder, modified_magnitudes_path)

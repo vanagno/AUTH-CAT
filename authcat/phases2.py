@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from project import open_project
+from project import open_project, shown
 
 __all__ = [
     "Arrival",
@@ -484,11 +484,11 @@ def _prompt_for_input(folder: str = "Input") -> Path:
     """
     d = Path(folder)
     if d.is_dir():
-        print(f"{folder} folder:")
+        print(f"{shown(folder)} folder:")
         for f in sorted(d.iterdir()):
             print("   ", f.name)
     else:
-        print(f"The folder {folder} does not exist.")
+        print(f"The folder {shown(folder)} does not exist.")
 
     while True:
         try:
@@ -503,7 +503,7 @@ def _prompt_for_input(folder: str = "Input") -> Path:
 
         if not sys.stdin.isatty():
             raise SystemExit(f"error: {name} not found")
-        print(f"   '{name}' is not in {folder}/ and is not a readable path -- try again.")
+        print(f"   '{name}' is not in {shown(folder)}/ and is not a readable path -- try again.")
 
 
 #: Accepted answers to the format question, all lower-case.
@@ -569,7 +569,7 @@ def main(argv: list[str] | None = None) -> int:
 
     events = read_bulletin(src, weight_col=args.weight_col)
     n_pha = sum(len(e.arrivals) for e in events)
-    print(f"Read {len(events)} events and {n_pha} picks from {src}")
+    print(f"Read {len(events)} events and {n_pha} picks from {shown(src)}")
     if not events:
         print("error: no events parsed -- check that the bulletin uses the expected "
               "'Date'/'Time'/'Latitude'/'Phase arrivals:' labels", file=sys.stderr)
@@ -590,13 +590,13 @@ def main(argv: list[str] | None = None) -> int:
         rep = write_hypodd(events, out, min_phases=args.min_phases,
                            max_tt=args.max_tt, renumber=args.renumber,
                            pad_time=args.pad_time)
-        print(f"HypoDD phase input -> {out}: {rep.summary()}")
+        print(f"HypoDD phase input -> {shown(out)}: {rep.summary()}")
         written["hypodd"] = {"file": proj.rel(out), "events": rep.events_written,
                              "phases": rep.phases_written}
     if fmt in ("hypo71", "both"):
         out = Path(args.output) if args.output else outdir / "phases.txt"
         rep = write_hypo71(events, out)
-        print(f"HYPO71 phase list  -> {out}: {rep.summary()}")
+        print(f"HYPO71 phase list  -> {shown(out)}: {rep.summary()}")
         written["hypo71"] = {"file": proj.rel(out), "events": rep.events_written,
                              "phases": rep.phases_written}
     proj.update("phases2.py", {"phases": written}, bulletin=proj.rel(src),

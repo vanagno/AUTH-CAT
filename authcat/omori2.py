@@ -7,7 +7,7 @@ import scipy.integrate as integrate
 import emcee
 import corner
 from obspy.core.utcdatetime import UTCDateTime as UTC
-from project import open_project
+from project import open_project, shown
 
 # Read the catalog
 def read_catalog(filename):
@@ -16,10 +16,12 @@ def read_catalog(filename):
     return df
 
 
-# Filter events after mainshock
-def filter_catalog(df, start_time=None):
+# Keep the events between the start and end times
+def filter_catalog(df, start_time=None, end_time=None):
     if start_time is not None:
         df = df[df['Datetime'] >= start_time]
+    if end_time is not None:
+        df = df[df['Datetime'] <= end_time]
     df = df.reset_index(drop=True)
     return df
 
@@ -61,9 +63,9 @@ def log_prob(theta, edges, observed_counts, bounds):
     return lp + log_likelihood(theta, edges, observed_counts)
 
 # Main processing and plotting
-def fit_and_plot(df, save_dir, base_filename, start_time=None):
+def fit_and_plot(df, save_dir, base_filename, start_time=None, end_time=None):
     """Fit the modified Omori law, plot it and return the fit for the project record."""
-    df = filter_catalog(df, start_time)
+    df = filter_catalog(df, start_time, end_time)
     mags = df['M'].values
     times = (df['Datetime'] - df['Datetime'].min()).dt.total_seconds() / 86400  # in days
 
@@ -114,9 +116,10 @@ def fit_and_plot(df, save_dir, base_filename, start_time=None):
     os.makedirs(save_dir, exist_ok=True)
     plt.savefig(figure, dpi=100)
     plt.show()
-    print(f"Modified Omori fit saved to {figure}")
+    print(f"Modified Omori fit saved to {shown(figure)}")
     return {
         "start_time": df['Datetime'].min().isoformat(),
+        "end_time": df['Datetime'].max().isoformat(),
         "events": len(df),
         "K": round(float(K_mle), 2), "c": round(float(c_mle), 2), "p": round(float(p_mle), 2),
         "bayesian": {"K": round(float(K_bayes), 2), "c": round(float(c_bayes), 2),
@@ -127,11 +130,11 @@ def fit_and_plot(df, save_dir, base_filename, start_time=None):
 proj = open_project()
 input_folder = proj.results_dir
 if os.path.isdir(input_folder):
-    print(f"{input_folder} folder:")
+    print(f"{shown(input_folder)} folder:")
     for name in os.listdir(input_folder):
         print(name)
 else:
-    print(f"The folder {input_folder} does not exist.")
+    print(f"The folder {shown(input_folder)} does not exist.")
 filename = os.path.join(input_folder, input("Please enter the name of the earthquake catalogue: ").strip())
 df = read_catalog(filename)
 
@@ -175,7 +178,32 @@ else:
     print("Invalid choice. Exiting.")
     exit()
 
-fit = fit_and_plot(df, proj.figures_dir, 'aftershock_decay', start_time)
+# The end time is asked whichever start was chosen
+first = start_time if start_time is not None else df['Datetime'].min()
+while True:
+    try:
+        end_str = input("Enter end date and time (YYYY-MM-DD HH:MM:SS, blank = end of catalog): ").strip()
+    except EOFError:
+        end_str = ""
+    if not end_str:
+        end_time = None
+        fit_end = "catalogue_end"
+        print("Using the catalog up to its last event.")
+        break
+    try:
+        end_time = pd.to_datetime(end_str)
+    except (ValueError, TypeError):
+        print("Invalid format. Please use YYYY-MM-DD HH:MM:SS.")
+        continue
+    n_events = ((df['Datetime'] >= first) & (df['Datetime'] <= end_time)).sum()
+    if n_events < 2:
+        print(f"Only {n_events} events between {first} and {end_time}; please give a later end time.")
+        continue
+    fit_end = end_time.isoformat()
+    print(f"Using custom end time: {end_time}")
+    break
+
+fit = fit_and_plot(df, proj.figures_dir, 'aftershock_decay', start_time, end_time)
 fit["figure"] = proj.rel(fit["figure"])
-proj.update("omori2.py", {"modified_omori": {"fit_start": fit_start, **fit}},
+proj.update("omori2.py", {"modified_omori": {"fit_start": fit_start, "fit_end": fit_end, **fit}},
             catalogue=proj.rel(filename))
