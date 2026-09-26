@@ -1,23 +1,16 @@
 #!/usr/bin/env python3
-"""Bulletin to catalogue conversion for the AUTHCAT package.
+"""Bulletin to catalogue conversion.
 
-Replaces two scripts with one reader and three writers:
 
-``bul.py``        bulletin -> the 11-column catalogue  (``write_classic``)
-``transform.py``  11-column -> the 6-column analyst file  (``write_sixcol``)
-
-and adds QuakeML 1.2 (``write_quakeml``), which unlike the two text formats
-carries the whole bulletin: origins with their uncertainties, both network
-magnitudes, every phase pick with its residual and weight, and every station
-magnitude with its amplitude.
-
-The bulletin is read once into ``Event`` objects and all three formats are
+The bulletin is read once into ``Event`` objects and three formats (full catalogue, 6-column and quakeml) are
 written from that, so the outputs cannot disagree with each other -- the old
 pair could, because ``transform.py`` re-parsed ``bul.py``'s text output and
 rounded a second time.
 
+QuakeML 1.2 (``write_quakeml``) carries the whole bulletin information, like
+origins with their uncertainties, both network magnitudes, every phase pick 
+with its residual and weight, and every station magnitude with its amplitude.
 
-Verified against the Tyrnavos 2021 bulletin
 
 The outputs go in the project's Results folder, and the catalogue's extent
 and largest event are recorded in the project record (see ``project.py``).
