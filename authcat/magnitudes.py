@@ -148,7 +148,7 @@ def plot_station_data(station_counts, median_residuals, output_file, residual_th
         for level in (residual_threshold, -residual_threshold):
             ax1.axhline(level, color=FLAG_COLOR, linewidth=1, linestyle='--')
         ax1.legend(handles=[Patch(facecolor=FLAG_COLOR, edgecolor='black',
-                                  label=f'|median residual| > {residual_threshold:g}')],
+                                  label=f'abs median residual > {residual_threshold:g}')],
                    loc='best')
     ax2.bar(stations, counts, edgecolor='black',
             color=[FLAG_COLOR if station in flagged else 'royalblue' for station in stations])
