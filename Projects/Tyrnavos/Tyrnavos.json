@@ -156,12 +156,7 @@
     "K": 5947.99,
     "c": 4.97,
     "p": 1.77,
-    "bayesian": {
-      "K": 6689.96,
-      "c": 5.16,
-      "p": 1.81
-    },
-    "figure": "Figures/aftershock_decay_omori_fit.png"
+    "figure": null
   },
   "figures": {
     "epicentral_map": "Figures/Map_epic.png",
