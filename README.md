@@ -35,9 +35,9 @@ Reference files shared by every project, such as the station list
 2. Run the desired scripts. Each one first asks which project to work
    on (pressing Enter takes the last one used), reads its input from that project and
    writes its output there. When input is piped in by a batch script, the last
-   project used is taken without asking. `catalog.py` and `phases2.py` also When a script asks for a bulletin, catalogue or
+   project used is taken without asking. `catalog.py` and `phases2.py` also
+   accept `-p/--project`. When a script asks for a bulletin, catalogue or
    phase list, pressing Enter takes the project's own file (e.g. `Tyrnavos.bul`, `Tyrnavos_cat.txt`).
-   accept `-p/--project`.
 
 3. Build the PDF report of everything recorded so far :
 
