@@ -90,7 +90,14 @@
     "magnitudes_file": "Magnitudes/magnitudes.txt",
     "modified_magnitudes_file": "Magnitudes/modified_magnitudes.txt",
     "modified_catalogue_file": "Results/Tyrnavos_cat_mod.txt",
-    "figure": "Magnitudes/magnitudes.png"
+    "figure": "Magnitudes/magnitudes.png",
+    "bland_altman": {
+      "figure": null,
+      "events": null,
+      "mean_difference": null,
+      "lower_limit": null,
+      "upper_limit": null
+    }
   },
   "station_phases": {
     "available": true,
@@ -151,12 +158,34 @@
   "modified_omori": {
     "available": true,
     "fit_start": "catalogue_start",
+    "fit_end": null,
     "start_time": "2021-03-03T08:00:37.674000",
+    "end_time": null,
+    "magnitude_threshold": null,
     "events": 1753,
     "K": 5947.99,
     "c": 4.97,
     "p": 1.77,
-    "figure": null
+    "mcmc": {
+      "K": {
+        "median": null,
+        "p16": null,
+        "p84": null
+      },
+      "c": {
+        "median": null,
+        "p16": null,
+        "p84": null
+      },
+      "p": {
+        "median": null,
+        "p16": null,
+        "p84": null
+      }
+    },
+    "figure": null,
+    "mcmc_figure": null,
+    "fit_data_file": null
   },
   "figures": {
     "epicentral_map": "Figures/Map_epic.png",
@@ -411,6 +440,66 @@
       ],
       "details": {
         "bulletin": "Input/Tyrnavos.bul"
+      }
+    },
+    {
+      "time": "2026-09-30T16:11:18+03:00",
+      "script": "map.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-30T16:11:58+03:00",
+      "script": "map.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-30T16:12:45+03:00",
+      "script": "map.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-30T16:13:27+03:00",
+      "script": "map.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-30T16:13:44+03:00",
+      "script": "map.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-30T16:14:01+03:00",
+      "script": "map.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
       }
     }
   ]

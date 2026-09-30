@@ -65,8 +65,8 @@ def plot_earthquakes_final_rounded_ticks(latitudes, longitudes, magnitudes, outp
     meridian_interval = 0.2
     parallel_interval = 0.2
 
-    meridians = earth_map.drawmeridians(np.arange(lon_start, lon_end + meridian_interval, meridian_interval), labels=[True, False, False, True])
-    parallels = earth_map.drawparallels(np.arange(lat_start, lat_end + parallel_interval, parallel_interval), labels=[True, False, False, True])
+    meridians = earth_map.drawmeridians(np.arange(lon_start, lon_end + meridian_interval, meridian_interval), labels=[True, False, False, True], linewidth=0.3)
+    parallels = earth_map.drawparallels(np.arange(lat_start, lat_end + parallel_interval, parallel_interval), labels=[True, False, False, True], linewidth=0.3)
     
     plt.legend(handles=legend_patches, loc='upper left', title='Magnitudes')
     plt.title('Earthquake Locations')
