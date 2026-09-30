@@ -2,8 +2,9 @@
 """Project folders and the project record for AUTH-CAT.
 
 Each analysis lives in its own folder, so two runs never overwrite each other.
-The folders are kept in Projects/ at the top of the repository, next to
-authcat/, whatever folder the scripts are run from:
+The folders are kept in Projects/ inside the folder the scripts are run from,
+so every working folder has its own projects; the AUTHCAT_PROJECTS environment
+variable names another folder to keep them in instead:
 
     Projects/<name>/
         <name>.json   the project record -- what every script found
@@ -44,12 +45,16 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-#: The scripts' own folder, authcat/. Projects and shared files are found
-#: from here rather than from the working directory, so the scripts can be
-#: run from any folder.
+#: The scripts' own folder, authcat/, which holds the shared files.
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 
-PROJECTS_DIR = _SCRIPTS_DIR.parent / "Projects"
+#: Projects/ in the folder the scripts are run from, unless the
+#: AUTHCAT_PROJECTS environment variable names another folder.
+PROJECTS_DIR = (
+    Path(os.environ["AUTHCAT_PROJECTS"]).expanduser()
+    if os.environ.get("AUTHCAT_PROJECTS")
+    else Path.cwd() / "Projects"
+).resolve()
 SUBDIRS = ("Input", "Results", "Figures", "Magnitudes")
 
 #: Reference files shared by every project, such as the station list

@@ -3,8 +3,11 @@
 ## Projects
 
 Every analysis session is kept in its own project folder, so runs never overwrite each
-other. The project folders live in `Projects/` at the top of the repository, next to
-`authcat/`, and the scripts find them from any folder they are run from.
+other. The project folders live in `Projects/` inside the folder you run the scripts
+from, so each working folder keeps its own projects; set the `AUTHCAT_PROJECTS`
+environment variable to keep them in one folder elsewhere. The example projects
+in this repository are found when the scripts are run from its top folder, e.g.
+`python authcat/histograms.py`.
 
 ```
 Projects/<name>/
