@@ -770,6 +770,23 @@ def add_wadati(
     )
 
 
+#: How omori.py chose each end of the sequence.
+OMORI_BOUND_LABELS = {
+    "catalogue_start": "start of catalogue",
+    "largest_event": "largest earthquake",
+    "specific_datetime": "chosen time",
+    "catalogue_end": "end of catalogue",
+}
+
+
+def sequence_bound(time_value: Any, mode: Any) -> str:
+    """A sequence start or end, e.g. '2021-03-03 10:16:08.367 (largest earthquake)'."""
+    text = fmt_datetime(time_value)
+    if mode in OMORI_BOUND_LABELS:
+        return f"{text} ({OMORI_BOUND_LABELS[mode]})" if text != "-" else OMORI_BOUND_LABELS[mode]
+    return text if text != "-" else fmt(mode)
+
+
 def add_omori(
     story: list[Any],
     data: dict[str, Any],
@@ -782,14 +799,24 @@ def add_omori(
 
     add_section_heading(story, "Modified Omori Law", styles)
 
+    threshold = omori.get("magnitude_threshold")
     rows = [
-        ["Fit start", fmt(omori.get("fit_start"))],
-        ["Fit end", fmt(omori.get("fit_end"))],
-        ["K", fmt(omori.get("K"))],
-        ["c", fmt(omori.get("c"))],
-        ["p", fmt(omori.get("p"))],
+        ["Sequence start", sequence_bound(omori.get("start_time"), omori.get("fit_start"))],
+        ["Sequence end", sequence_bound(omori.get("end_time"), omori.get("fit_end"))],
+        ["Magnitude threshold (Mc)", f"M >= {fmt(threshold)}" if threshold is not None else "All events"],
+        ["Events used", fmt(omori.get("events"))],
     ]
     story.append(make_table(rows, [5.0 * cm, CONTENT_WIDTH - 5.0 * cm]))
+    story.append(Spacer(1, 8))
+
+    params = [["Parameter", "Bayesian fit", "MCMC median", "16th-84th percentile"]]
+    for name in ("K", "c", "p"):
+        median = safe_get(omori, "mcmc", name, "median")
+        p16 = safe_get(omori, "mcmc", name, "p16")
+        p84 = safe_get(omori, "mcmc", name, "p84")
+        spread = f"{fmt(p16)} to {fmt(p84)}" if p16 is not None and p84 is not None else "-"
+        params.append([name, fmt(omori.get(name)), fmt(median), spread])
+    story.append(make_header_table(params, [3.4 * cm, 4.3 * cm, 4.3 * cm, 5.4 * cm]))
     story.append(Spacer(1, 7))
 
     add_image(
@@ -797,6 +824,14 @@ def add_omori(
         project_root,
         omori.get("figure"),
         "Modified Omori Law fit.",
+        styles,
+    )
+    add_image(
+        story,
+        project_root,
+        omori.get("mcmc_figure"),
+        "MCMC posterior distributions of the Modified Omori parameters "
+        "(16th, 50th and 84th percentiles marked).",
         styles,
     )
 

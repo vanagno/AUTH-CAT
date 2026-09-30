@@ -1,7 +1,7 @@
 import importlib.metadata
 
 # Named as pip installs them
-modules_to_check = ['matplotlib', 'pandas', 'numpy', 'basemap','basemap-data-hires', 'cartopy', 'corner', 'emcee', 'scipy', 'reportlab', 'obspy']
+modules_to_check = ['matplotlib', 'pandas', 'numpy', 'basemap','basemap-data-hires', 'cartopy', 'corner', 'emcee', 'scipy', 'reportlab']
 
 # Packages imported under a different name from the one pip installs and data only packages
 import_names = {'basemap': 'mpl_toolkits.basemap'}

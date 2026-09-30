@@ -5,29 +5,27 @@ AUTH-CAT Modified Omori Law analysis.
 
 Workflow
 --------
-1. Read a standard AUTH-CAT 11-column earthquake catalogue.
+1. Read a standard AUTH-CAT 11-column earthquake catalogue from the project's
+   Results folder.
 2. Choose the beginning of the aftershock sequence:
       1 - start of catalogue
       2 - largest earthquake
       3 - specific date/time
+   and its end (press Enter for the end of the catalogue).
 3. Optionally filter events using a magnitude threshold (Mc).
 4. Convert event times to days relative to the selected start.
 5. Estimate Modified Omori parameters with the Bayesian fitting routine
-   provided by omori_utils.
+   (bayes_logL / bayes_getK below).
 6. Run MCMC to estimate parameter uncertainty.
-7. Save:
+7. Save, in the project folder (see project.py):
       Figures/Omori.png
       Figures/Omori_MCMC.png
       Results/Omori_fit_data.txt
+   and record the fit in the project record.
 
 Required additional packages:
     emcee
     corner
-
-The script expects omori_utils to provide:
-    bayes_logL(otimes, [c, p])
-    bayes_getK(otimes, [c, p])
-    omori(times, [c, K, p])
 """
 
 from __future__ import annotations
@@ -53,20 +51,8 @@ except ImportError as exc:
         "Missing dependency 'corner'. Install it with: pip install corner"
     ) from exc
 
-try:
-    import src.omori_utils as omori
-except ModuleNotFoundError:
-    try:
-        import omori_utils as omori
-    except ModuleNotFoundError as exc:
-        raise SystemExit(
-            "Could not import omori_utils. Expected either "
-            "'src/omori_utils.py' or 'omori_utils.py'."
-        ) from exc
+from project import open_project, shown
 
-
-RESULTS_DIR = Path("Results")
-FIGURES_DIR = Path("Figures")
 
 META = {
     "nbin": 60,
@@ -83,14 +69,61 @@ META = {
 }
 
 
-def list_catalogues() -> None:
-    """Print text files currently available in Results/."""
-    print("Results folder:")
-    if not RESULTS_DIR.exists():
+# -----------------------------------------------------------------------------
+# Modified Omori law and its Bayesian likelihood (formerly omori_utils.py)
+# -----------------------------------------------------------------------------
+
+
+def omori(x, params):
+    """Modified Omori rate K / (x + c)^p, with params = [c, K, p]."""
+    c, K, p = params
+    return K/((x+c)**p)
+
+
+def bayes_logL(otimes, params):
+    """Negative log-likelihood of the event times for params = [c, p].
+
+    K is not a parameter here: the rate is normalised over the time window,
+    and K is recovered afterwards with bayes_getK.
+    """
+    c, p = params
+    S, T = min(otimes), max(otimes)
+    n = len(otimes)
+    if abs(p - 1) < 1e-8:
+        D = (1/c) / (np.log(1+T/c) - np.log(1+S/c))
+    else:
+        D = ((1-p)/c) / ((1+T/c)**(1-p) - (1+S/c)**(1-p))
+    L = -n*np.log(D) + p*np.sum(np.log(1+otimes/c))
+    return L
+
+
+def bayes_getK(otimes, params):
+    """Return (bayes_logL, K) for params = [c, p]."""
+    c, p = params
+    S, T = min(otimes), max(otimes)
+    n = len(otimes)
+    if abs(p - 1) < 1e-8:
+        D = (1/c) / (np.log(1+T/c) - np.log(1+S/c))
+    else:
+        D = ((1-p)/c) / ((1+T/c)**(1-p) - (1+S/c)**(1-p))
+    L = -n*np.log(D) + p*np.sum(np.log(1+otimes/c))
+    K = D * n * c**p
+    return L, K
+
+
+# -----------------------------------------------------------------------------
+# Catalogue input and sequence selection
+# -----------------------------------------------------------------------------
+
+
+def list_catalogues(results_dir: Path) -> None:
+    """Print text files currently available in the Results folder."""
+    print(f"{shown(results_dir)} folder:")
+    if not results_dir.exists():
         print("  <Results folder not found>")
         return
 
-    files = sorted(p.name for p in RESULTS_DIR.glob("*.txt"))
+    files = sorted(p.name for p in results_dir.glob("*.txt"))
     if not files:
         print("  <no .txt files found>")
         return
@@ -99,20 +132,20 @@ def list_catalogues() -> None:
         print(f"  {name}")
 
 
-def resolve_catalogue_path(user_input: str) -> Path:
-    """Resolve either a direct path or a filename inside Results/."""
+def resolve_catalogue_path(user_input: str, results_dir: Path) -> Path:
+    """Resolve either a direct path or a filename inside the Results folder."""
     supplied = Path(user_input.strip())
 
     if supplied.exists():
         return supplied
 
-    candidate = RESULTS_DIR / supplied
+    candidate = results_dir / supplied
     if candidate.exists():
         return candidate
 
     raise FileNotFoundError(
         f"Catalogue not found: '{user_input}'. "
-        f"Checked both '{supplied}' and '{candidate}'."
+        f"Checked both '{supplied}' and '{shown(candidate)}'."
     )
 
 
@@ -134,7 +167,7 @@ def read_authcat_catalogue(path: Path) -> pd.DataFrame:
     try:
         df = pd.read_csv(path, sep=r"\s+", comment="#", engine="python")
     except Exception as exc:
-        raise ValueError(f"Could not read catalogue '{path}': {exc}") from exc
+        raise ValueError(f"Could not read catalogue '{shown(path)}': {exc}") from exc
 
     normalized = {str(col).strip().lower(): col for col in df.columns}
 
@@ -159,7 +192,7 @@ def read_authcat_catalogue(path: Path) -> pd.DataFrame:
 
         if df.shape[1] < 11:
             raise ValueError(
-                f"Catalogue '{path}' has {df.shape[1]} columns. "
+                f"Catalogue '{shown(path)}' has {df.shape[1]} columns. "
                 "The standard AUTH-CAT catalogue requires 11 columns."
             )
 
@@ -254,6 +287,47 @@ def choose_start_time(catalogue: pd.DataFrame) -> tuple[pd.Timestamp, str]:
         print("Please enter 1, 2, or 3.")
 
 
+def choose_end_time(
+    catalogue: pd.DataFrame, start_time: pd.Timestamp
+) -> tuple[pd.Timestamp | None, str]:
+    """Interactively select the end of the aftershock sequence.
+
+    Enter keeps every event up to the end of the catalogue. An end time that
+    leaves fewer than 3 events after the start is asked again.
+    """
+    while True:
+        try:
+            text = input(
+                "\nEnter end date/time [YYYY-MM-DD HH:MM:SS] "
+                "(press Enter for the end of the catalogue): "
+            ).strip()
+        except EOFError:
+            text = ""
+
+        if text == "":
+            print(f"Ending at catalogue end: {catalogue['datetime'].iloc[-1]}")
+            return None, "catalogue_end"
+
+        try:
+            end_time = pd.to_datetime(text, errors="raise")
+        except Exception:
+            print("Invalid date/time. Example: 2024-03-20 00:00:00")
+            continue
+
+        in_window = (catalogue["datetime"] > start_time) & (
+            catalogue["datetime"] <= end_time
+        )
+        if in_window.sum() < 3:
+            print(
+                f"Only {int(in_window.sum())} events between {start_time} and "
+                f"{end_time}; please give a later end time."
+            )
+            continue
+
+        print(f"Ending at specified time: {end_time}")
+        return end_time, "specific_datetime"
+
+
 def choose_magnitude_threshold() -> float | None:
     """Return an optional lower magnitude threshold."""
     while True:
@@ -274,10 +348,14 @@ def choose_magnitude_threshold() -> float | None:
 def prepare_aftershock_times(
     catalogue: pd.DataFrame,
     start_time: pd.Timestamp,
+    end_time: pd.Timestamp | None,
     magnitude_threshold: float | None,
 ) -> tuple[np.ndarray, pd.DataFrame]:
     """Select events and return positive relative times in days."""
     selected = catalogue[catalogue["datetime"] >= start_time].copy()
+
+    if end_time is not None:
+        selected = selected[selected["datetime"] <= end_time].copy()
 
     if magnitude_threshold is not None:
         selected = selected[selected["mag"] >= magnitude_threshold].copy()
@@ -309,9 +387,14 @@ def prepare_aftershock_times(
     return np.sort(otimes), selected
 
 
+# -----------------------------------------------------------------------------
+# Fitting
+# -----------------------------------------------------------------------------
+
+
 def fit_bayesian(otimes: np.ndarray) -> np.ndarray:
-    """Estimate [c, K, p] using the Bayesian routines in omori_utils."""
-    objective = lambda x: omori.bayes_logL(otimes, x)
+    """Estimate [c, K, p] using the Bayesian likelihood above."""
+    objective = lambda x: bayes_logL(otimes, x)
 
     fit = minimize(
         objective,
@@ -328,7 +411,7 @@ def fit_bayesian(otimes: np.ndarray) -> np.ndarray:
             f"{fit.message}"
         )
 
-    _, K = omori.bayes_getK(otimes, fit.x)
+    _, K = bayes_getK(otimes, fit.x)
     c, p = fit.x
     params = np.array([c, K, p], dtype=float)
 
@@ -356,7 +439,7 @@ def log_prior(theta: np.ndarray, otimes: np.ndarray) -> float:
         return -np.inf
 
     try:
-        _, K = omori.bayes_getK(otimes, np.array([c, p], dtype=float))
+        _, K = bayes_getK(otimes, np.array([c, p], dtype=float))
     except Exception:
         return -np.inf
 
@@ -372,7 +455,7 @@ def log_probability(theta: np.ndarray, otimes: np.ndarray) -> float:
     if not np.isfinite(prior):
         return -np.inf
 
-    objective = omori.bayes_logL(otimes, theta)
+    objective = bayes_logL(otimes, theta)
     if not np.isfinite(objective):
         return -np.inf
 
@@ -442,6 +525,10 @@ def run_mcmc(
         log_probability,
         args=(otimes,),
     )
+    # emcee draws from its own copy of numpy's global random state, which is
+    # not seeded; seed it from META too so that repeated runs give the same
+    # samples.
+    sampler.random_state = np.random.RandomState(META["random_seed"]).get_state()
     sampler.run_mcmc(
         positions,
         int(META["mcmc_steps"]),
@@ -466,7 +553,7 @@ def run_mcmc(
     derived_samples = []
     for c, p in cp_samples:
         try:
-            _, K = omori.bayes_getK(
+            _, K = bayes_getK(
                 otimes,
                 np.array([c, p], dtype=float),
             )
@@ -483,6 +570,11 @@ def run_mcmc(
 
     percentiles = np.percentile(flat_samples, [16, 50, 84], axis=0)
     return flat_samples, percentiles
+
+
+# -----------------------------------------------------------------------------
+# Outputs
+# -----------------------------------------------------------------------------
 
 
 def make_decay_plot(
@@ -510,7 +602,7 @@ def make_decay_plot(
     count, edges = np.histogram(otimes, bins=bins)
     bin_loc = (edges[1:] + edges[:-1]) / 2.0
     occ_dens = count / np.diff(edges)
-    fit_values = omori.omori(bin_loc, bayes_params)
+    fit_values = omori(bin_loc, bayes_params)
 
     fig, ax = plt.subplots(figsize=(10, 8))
 
@@ -585,11 +677,19 @@ def print_mcmc_summary(percentiles: np.ndarray) -> None:
         )
 
 
-def main() -> None:
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+def _sig(value: float) -> float:
+    """Six significant digits, for the project record."""
+    return float(f"{value:.6g}")
 
-    list_catalogues()
+
+def main() -> None:
+    proj = open_project()
+    results_dir = proj.results_dir
+    figures_dir = proj.figures_dir
+    results_dir.mkdir(parents=True, exist_ok=True)
+    figures_dir.mkdir(parents=True, exist_ok=True)
+
+    list_catalogues(results_dir)
 
     catalogue_name = input(
         "\nPlease enter the earthquake catalogue: "
@@ -599,14 +699,14 @@ def main() -> None:
         raise SystemExit("No catalogue was provided.")
 
     try:
-        catalogue_path = resolve_catalogue_path(catalogue_name)
+        catalogue_path = resolve_catalogue_path(catalogue_name, results_dir)
         catalogue = read_authcat_catalogue(catalogue_path)
     except Exception as exc:
         raise SystemExit(f"Error: {exc}") from exc
 
     print(
         f"\nLoaded {len(catalogue)} events from "
-        f"{catalogue_path.as_posix()}."
+        f"{shown(catalogue_path)}."
     )
     print(
         f"Catalogue time span: "
@@ -615,12 +715,14 @@ def main() -> None:
     )
 
     start_time, start_mode = choose_start_time(catalogue)
+    end_time, end_mode = choose_end_time(catalogue, start_time)
     magnitude_threshold = choose_magnitude_threshold()
 
     try:
         otimes, _ = prepare_aftershock_times(
             catalogue,
             start_time,
+            end_time,
             magnitude_threshold,
         )
     except Exception as exc:
@@ -629,6 +731,10 @@ def main() -> None:
     print("\nModified Omori analysis selection:")
     print(f"  Start mode:   {start_mode}")
     print(f"  Start time:   {start_time}")
+    if end_time is None:
+        print(f"  End time:     {catalogue['datetime'].iloc[-1]} (end of catalogue)")
+    else:
+        print(f"  End time:     {end_time}")
     if magnitude_threshold is None:
         print("  Magnitude:    all events")
     else:
@@ -653,9 +759,9 @@ def main() -> None:
     print(f"  c = {c_fit:.6g}")
     print(f"  p = {p_fit:.6g}")
 
-    omori_figure = FIGURES_DIR / "Omori.png"
-    mcmc_figure = FIGURES_DIR / "Omori_MCMC.png"
-    fit_data_file = RESULTS_DIR / "Omori_fit_data.txt"
+    omori_figure = figures_dir / "Omori.png"
+    mcmc_figure = figures_dir / "Omori_MCMC.png"
+    fit_data_file = results_dir / "Omori_fit_data.txt"
 
     try:
         bin_loc, occ_dens, fit_values = make_decay_plot(
@@ -690,9 +796,41 @@ def main() -> None:
     print_mcmc_summary(percentiles)
 
     print("\nOutputs:")
-    print(f"  Modified Omori plot: {omori_figure.as_posix()}")
-    print(f"  MCMC corner plot:    {mcmc_figure.as_posix()}")
-    print(f"  Fit data:            {fit_data_file.as_posix()}")
+    print(f"  Modified Omori plot: {shown(omori_figure)}")
+    print(f"  MCMC corner plot:    {shown(mcmc_figure)}")
+    print(f"  Fit data:            {shown(fit_data_file)}")
+
+    q16, q50, q84 = percentiles
+    proj.update(
+        "omori.py",
+        {
+            "modified_omori": {
+                "fit_start": start_mode,
+                "fit_end": end_mode,
+                "start_time": start_time.isoformat(),
+                "end_time": (
+                    end_time if end_time is not None else catalogue["datetime"].iloc[-1]
+                ).isoformat(),
+                "magnitude_threshold": magnitude_threshold,
+                "events": len(otimes),
+                "K": _sig(K_fit),
+                "c": _sig(c_fit),
+                "p": _sig(p_fit),
+                "mcmc": {
+                    name: {
+                        "median": _sig(q50[i]),
+                        "p16": _sig(q16[i]),
+                        "p84": _sig(q84[i]),
+                    }
+                    for i, name in enumerate(("c", "K", "p"))
+                },
+                "figure": proj.rel(omori_figure),
+                "mcmc_figure": proj.rel(mcmc_figure),
+                "fit_data_file": proj.rel(fit_data_file),
+            }
+        },
+        catalogue=proj.rel(catalogue_path),
+    )
 
 
 if __name__ == "__main__":
