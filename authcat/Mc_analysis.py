@@ -36,6 +36,7 @@ def fmd(mag, mbin):
 
 cat_mi, cat_nbmag, cat_cumnbmag = fmd(mag=catalog['mw'], mbin=0.1)
 
+plt.figure()
 plt.plot(cat_mi, cat_cumnbmag, marker='o', markersize=8, markerfacecolor='red', linestyle='None', color='black', label="Cumulative")
 plt.plot(cat_mi, cat_nbmag, marker='s', markersize=8, markerfacecolor='white', linestyle='None', color='black', label="Incremental")
 plt.yscale('log')
@@ -89,6 +90,7 @@ cat_mc = get_maxc(mag = catalog['mw'], mbin = 0.1)
 cat_a, cat_b, cat_aki_unc, cat_shibolt_unc = b_est(mag = catalog['mw'], mbin = 0.1, mc = cat_mc)
 maxc_result = method_result(cat_mc, cat_b, cat_shibolt_unc)
 
+plt.figure()
 plt.plot(cat_mi, cat_cumnbmag, marker='o', markersize=8, markerfacecolor='red', linestyle='None', color='black')
 plt.plot(cat_mi, cat_nbmag, marker='s', markersize=8, markerfacecolor='white', linestyle='None', color='black')
 plt.plot(cat_mi, (10**(cat_a - (cat_b * cat_mi))), linewidth=3, color='black')
@@ -147,6 +149,7 @@ def get_gft(mag, mbin):
 
 cat_gft = get_gft(mag = catalog['mw'], mbin = 0.1) # GFT completeness magnitude
 
+plt.figure()
 plt.plot(cat_gft[1], cat_gft[2], color="red")
 plt.plot(cat_gft[1], cat_gft[2], 'D', color="darkred", markersize=6, label="GFT for each cut-off mag")
 plt.vlines(cat_gft[0], ymin=0, ymax=100, linestyles='dashed', label="GFT Mc = " + str(round(cat_gft[0], 1)))
@@ -171,6 +174,7 @@ cat_mc = cat_gft[0] # GFT completeness magnitude
 cat_a, cat_b, cat_aki_unc, cat_shibolt_unc = b_est(mag = catalog['mw'], mbin = 0.1, mc = cat_mc)
 gft_result = method_result(cat_mc, cat_b, cat_shibolt_unc, goodness_of_fit_percent=cat_gft[3])
 
+plt.figure()
 plt.plot(cat_mi, cat_cumnbmag, marker='o', markersize=8, markerfacecolor='red', linestyle='None', color='black')
 plt.plot(cat_mi, cat_nbmag, marker='s', markersize=8, markerfacecolor='white', linestyle='None', color='black')
 plt.plot(cat_mi, (10**(cat_a - (cat_b * cat_mi))), linewidth=3, color='black')
@@ -233,6 +237,7 @@ def get_mbs(mag, mbin, dM = 0.4, min_mc = -3):
     
 cat_mbs = get_mbs(mag = catalog['mw'], mbin = 0.1)
 
+plt.figure()
 plt.plot(cat_mbs[1], cat_mbs[2], '.', color='k', label="b-value at cut-off magnitude")
 plt.errorbar(cat_mbs[1], cat_mbs[2], yerr=cat_mbs[4], fmt='.', color='k')
 plt.plot(cat_mbs[1], cat_mbs[3], '.', color="c", label="avg b between cut-off mag and cut-off mag + dM")
@@ -253,6 +258,7 @@ cat_mc = cat_mbs[0]
 cat_a, cat_b, cat_aki_unc, cat_shibolt_unc = b_est(mag = catalog['mw'], mbin = 0.1, mc = cat_mc)
 mbs_result = method_result(cat_mc, cat_b, cat_shibolt_unc)
 
+plt.figure()
 plt.plot(cat_mi, cat_cumnbmag, marker='o', markersize=8, markerfacecolor='red', linestyle='None', color='black')
 plt.plot(cat_mi, cat_nbmag, marker='s', markersize=8, markerfacecolor='white', linestyle='None', color='black')
 plt.plot(cat_mi, (10**(cat_a - (cat_b * cat_mi))), linewidth=3, color='black')
