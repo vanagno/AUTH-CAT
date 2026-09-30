@@ -296,6 +296,21 @@ class Project:
         except ValueError:
             return full.as_posix()
 
+    def recorded_name(self, folder: str | os.PathLike, *keys: str) -> str | None:
+        """Name of the file the record holds under ``keys``, e.g.
+        ``("project", "catalogue_file")``, when that file is in ``folder`` and
+        still exists. Scripts offer it as the default at their file prompts.
+        """
+        value = self.load()
+        for key in keys:
+            value = value.get(key) if isinstance(value, dict) else None
+        if not value:
+            return None
+        path = (self.root / value).resolve()
+        if path.parent != Path(folder).resolve() or not path.is_file():
+            return None
+        return path.name
+
     def update(self, script: str, sections: dict, **details) -> None:
         """Merge ``sections`` into the record and add a line to its history.
 
@@ -339,6 +354,21 @@ def shown(path: str | os.PathLike) -> str:
     if len(parts) < 2:
         return f"{PROJECTS_DIR.name}/{'/'.join(parts)}"
     return Path(*parts[1:]).as_posix()
+
+
+def ask_file_name(prompt: str, default: str | None) -> str:
+    """Ask for a file name; Enter takes ``default`` when there is one.
+
+    ``prompt`` is the question without its closing colon. Returns "" when
+    nothing is entered and there is no default.
+    """
+    try:
+        answer = input(f"{prompt} [blank = {default}]: " if default else f"{prompt}: ").strip()
+    except EOFError:
+        if default:
+            return default
+        raise SystemExit("\nerror: no file name given") from None
+    return answer or (default or "")
 
 
 def list_projects(base: str | os.PathLike = PROJECTS_DIR) -> list[str]:

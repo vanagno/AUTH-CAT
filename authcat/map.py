@@ -3,7 +3,7 @@ from matplotlib.patches import Patch
 from mpl_toolkits.basemap import Basemap
 import numpy as np
 import os
-from project import open_project, shown
+from project import ask_file_name, open_project, shown
 
 def read_earthquake_catalog(file_path):
     """
@@ -83,7 +83,7 @@ if __name__ == "__main__":
             print(filename)
     else:
     	print(f"The folder {shown(input_folder)} does not exist.")
-    catalog_path = input("Please enter the name of the earthquake catalogue: ")
+    catalog_path = ask_file_name("Please enter the name of the earthquake catalogue", proj.recorded_name(input_folder, "project", "catalogue_file"))
     input_file_path = os.path.join(input_folder, catalog_path)    
     latitudes, longitudes, magnitudes = read_earthquake_catalog(input_file_path)
     output_file = os.path.join(proj.figures_dir, 'Map_epic.png')

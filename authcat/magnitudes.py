@@ -4,7 +4,7 @@ import sys
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import numpy as np
-from project import open_project, shown
+from project import ask_file_name, open_project, shown
 
 FLAG_COLOR = 'purple'
 
@@ -337,7 +337,7 @@ def main():
              print(filename)
     else:
     	print(f"The folder {shown(input_folder)} does not exist.")
-    file_path = input("Enter the path to the earthquake bulletin file: ")
+    file_path = ask_file_name("Enter the path to the earthquake bulletin file", proj.recorded_name(input_folder, "project", "bulletin_file"))
     input_file_path = os.path.join(input_folder, file_path)    
     output_file = 'magnitudes.txt'
 

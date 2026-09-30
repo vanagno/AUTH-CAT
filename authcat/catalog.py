@@ -35,7 +35,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Sequence
 
-from project import Project, open_project, shown
+from project import Project, ask_file_name, open_project, shown
 
 #: Kilometres per degree of latitude on a sphere of radius 6371 km. The
 #: bulletin gives horizontal uncertainties in km; QuakeML wants the
@@ -1065,7 +1065,7 @@ _FORMAT_ANSWERS = {
 }
 
 
-def _prompt_for_input(folder: str = "Input") -> str:
+def _prompt_for_input(folder: str = "Input", default: str | None = None) -> str:
     if os.path.isdir(folder):
         print(f"{shown(folder)} folder:")
         for name in sorted(os.listdir(folder)):
@@ -1073,7 +1073,7 @@ def _prompt_for_input(folder: str = "Input") -> str:
     else:
         print(f"The folder {shown(folder)} does not exist.")
     while True:
-        name = input("Enter the name of the earthquake bulletin file: ").strip()
+        name = ask_file_name("Enter the name of the earthquake bulletin file", default)
         path = os.path.join(folder, name) if name else ""
         if path and os.path.isfile(path):
             return path
@@ -1132,7 +1132,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     path = args.input
     if not path:
         if interactive:
-            path = _prompt_for_input(proj.input_dir)
+            path = _prompt_for_input(
+                proj.input_dir,
+                proj.recorded_name(proj.input_dir, "project", "bulletin_file"),
+            )
         else:
             path = _project_bulletin(proj)
             if not path:

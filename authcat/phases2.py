@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from project import open_project, shown
+from project import ask_file_name, open_project, shown
 
 __all__ = [
     "Arrival",
@@ -476,7 +476,7 @@ def write_hypo71(events: list[Event], path: str | Path) -> WriteReport:
 # --------------------------------------------------------------------------- #
 # CLI
 # --------------------------------------------------------------------------- #
-def _prompt_for_input(folder: str = "Input") -> Path:
+def _prompt_for_input(folder: str = "Input", default: str | None = None) -> Path:
     """Ask for a bulletin, re-asking on a typo when a human is at the keyboard.
 
     A bare filename is looked up inside `folder`; anything that looks like a
@@ -491,10 +491,7 @@ def _prompt_for_input(folder: str = "Input") -> Path:
         print(f"The folder {shown(folder)} does not exist.")
 
     while True:
-        try:
-            name = input("Please provide the name of the earthquake bulletin: ").strip()
-        except EOFError:
-            raise SystemExit("error: no bulletin name given") from None
+        name = ask_file_name("Please provide the name of the earthquake bulletin", default)
         if not name:
             raise SystemExit("error: no bulletin name given")
         for cand in (d / name, Path(name)):
@@ -562,7 +559,8 @@ def main(argv: list[str] | None = None) -> int:
                  "hypo71, or use --outdir to redirect both")
 
     proj = open_project(args.project)
-    src = Path(args.input) if args.input else _prompt_for_input(proj.input_dir)
+    src = Path(args.input) if args.input else _prompt_for_input(
+        proj.input_dir, proj.recorded_name(proj.input_dir, "project", "bulletin_file"))
     if not src.is_file():
         print(f"error: {src} not found", file=sys.stderr)
         return 1

@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from project import open_project, shown
+from project import ask_file_name, open_project, shown
 
 COLUMNS = ['Year', 'Stamp', 'Latitude', 'Longitude', 'Depth', 'Magnitude']
 
@@ -86,7 +86,7 @@ def prompt_for_mc():
             print(f"'{answer}' is not a number; please try again")
 
 
-def prompt_for_input(folder):
+def prompt_for_input(folder, default=None):
     """List the folder and ask for a file in it, re-asking until one exists."""
     if os.path.isdir(folder):
         print(f"\n{shown(folder)} folder:")
@@ -96,7 +96,7 @@ def prompt_for_input(folder):
         print(f"The folder {shown(folder)} does not exist.")
 
     while True:
-        name = input("Please provide the name of the 6-column catalogue: ").strip()
+        name = ask_file_name("Please provide the name of the 6-column catalogue", default)
         path = os.path.join(folder, name)
         if os.path.isfile(path):
             return path
@@ -105,7 +105,9 @@ def prompt_for_input(folder):
 
 if __name__ == "__main__":
     proj = open_project()
-    path = prompt_for_input(proj.results_dir)
+    path = prompt_for_input(
+        proj.results_dir,
+        proj.recorded_name(proj.results_dir, "project", "catalogue_6col_file"))
     mc = prompt_for_mc()
     result, filtered_result = calculate_cumulative_earthquakes(
         path, mc, figures_dir=proj.figures_dir)

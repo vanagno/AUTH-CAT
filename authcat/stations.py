@@ -53,7 +53,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import numpy as np
 import os
-from project import open_project, shown, UTILITIES_DIR
+from project import ask_file_name, open_project, shown, UTILITIES_DIR
 
 def generate_stations_map(counts, station_coordinates, output_map_path):
     p_phase_counts = [phases['P'] for phases in counts.values()]
@@ -90,7 +90,7 @@ if os.path.isdir(input_folder):
 else:
     print(f"The folder {shown(input_folder)} does not exist.")
 
-file_path = input("Please provide the name of the earthquake bulletin: ")
+file_path = ask_file_name("Please provide the name of the earthquake bulletin", proj.recorded_name(input_folder, "project", "bulletin_file"))
 input_file_path = os.path.join(input_folder, file_path)    
 
 output_file_path = os.path.join(proj.results_dir, 'station_phases_counts.txt')

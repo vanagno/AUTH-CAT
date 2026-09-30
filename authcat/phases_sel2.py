@@ -24,7 +24,7 @@ from __future__ import annotations
 import os
 import re
 
-from project import open_project, shown
+from project import ask_file_name, open_project, shown
 
 HYPO71_TERMINATOR = "                 10"
 
@@ -262,7 +262,9 @@ def main():
             print(filename)
     else:
         print(f"The folder {shown(input_folder)} does not exist.")
-    file_path = input("Please provide the phases list (should be phases.txt for HYPO71 or phase.dat for HYPODD formats if not renamed): ")
+    default = (proj.recorded_name(input_folder, "phases", "hypo71", "file")
+               or proj.recorded_name(input_folder, "phases", "hypodd", "file"))
+    file_path = ask_file_name("Please provide the phases list (should be phases.txt for HYPO71 or phase.dat for HYPODD formats if not renamed)", default)
     input_file_path = os.path.join(input_folder, file_path)
     if not os.path.isfile(input_file_path):
         raise SystemExit(f"error: {input_file_path} not found")

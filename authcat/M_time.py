@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from project import open_project, shown
+from project import ask_file_name, open_project, shown
 
 
 def read_catalog(file_path):
@@ -80,8 +80,9 @@ else:
 
 
 # Ask user which catalogue to process
-file_path = input(
-    "Please enter the name of the earthquake catalogue: "
+file_path = ask_file_name(
+    "Please enter the name of the earthquake catalogue",
+    proj.recorded_name(input_folder, "project", "catalogue_file"),
 )
 
 input_file_path = os.path.join(input_folder, file_path)

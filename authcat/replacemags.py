@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from project import open_project, shown
+from project import ask_file_name, open_project, shown
 
 def update_catalog_with_modified_magnitudes(catalog_path, modified_magnitudes_path, output_path):
     """Write the catalogue with the recomputed magnitudes; return how many
@@ -58,7 +58,7 @@ def main():
     else:
         print(f"The folder {shown(input_folder)} does not exist.")
         
-    catalog_path = input("Please provide the name of the initial catalogue: ")
+    catalog_path = ask_file_name("Please provide the name of the initial catalogue", proj.recorded_name(input_folder, "project", "catalogue_file"))
     input_file_path = os.path.join(input_folder, catalog_path)
     
     mag_folder = proj.magnitudes_dir
@@ -69,7 +69,9 @@ def main():
     else:
         print(f"The folder {shown(mag_folder)} does not exist.")
         
-    modified_magnitudes_path = input("Great! Now provide the modified mean magnitudes file\n(should be modified_magnitudes.txt if not renamed): ")
+    modified_magnitudes_path = ask_file_name(
+        "Great! Now provide the modified mean magnitudes file\n(should be modified_magnitudes.txt if not renamed)",
+        proj.recorded_name(mag_folder, "magnitude_regularization", "modified_magnitudes_file"))
     mag_file_path = os.path.join(mag_folder, modified_magnitudes_path)
     
     base_name = os.path.basename(input_file_path)

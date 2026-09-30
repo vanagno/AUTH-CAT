@@ -51,7 +51,7 @@ except ImportError as exc:
         "Missing dependency 'corner'. Install it with: pip install corner"
     ) from exc
 
-from project import open_project, shown
+from project import ask_file_name, open_project, shown
 
 
 META = {
@@ -691,9 +691,10 @@ def main() -> None:
 
     list_catalogues(results_dir)
 
-    catalogue_name = input(
-        "\nPlease enter the earthquake catalogue: "
-    ).strip()
+    catalogue_name = ask_file_name(
+        "\nPlease enter the earthquake catalogue",
+        proj.recorded_name(results_dir, "project", "catalogue_file"),
+    )
 
     if not catalogue_name:
         raise SystemExit("No catalogue was provided.")

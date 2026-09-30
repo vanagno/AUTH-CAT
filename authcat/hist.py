@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-from project import open_project, shown
+from project import ask_file_name, open_project, shown
 
 proj = open_project()
 input_folder = proj.results_dir
@@ -11,7 +11,7 @@ if os.path.isdir(input_folder):
 		print(filename)
 else:
 	print(f"The folder {shown(input_folder)} does not exist.")
-file_path = input("Please enter the name of the earthquake catalogue: ")  
+file_path = ask_file_name("Please enter the name of the earthquake catalogue", proj.recorded_name(input_folder, "project", "catalogue_file"))  
 input_file_path = os.path.join(input_folder, file_path)    
 
 df = pd.read_csv(input_file_path, sep=r"\s+")

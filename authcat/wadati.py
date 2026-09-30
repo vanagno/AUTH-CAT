@@ -3,7 +3,7 @@ import numpy as np
 from datetime import datetime
 from scipy.odr import Model, ODR, RealData
 import os
-from project import open_project, shown
+from project import ask_file_name, open_project, shown
 
 def parse_earthquake_data(bulletin_text):
     lines = bulletin_text.strip().split('\n')
@@ -108,7 +108,7 @@ def main():
             print(filename)
     else:
         print(f"The folder {shown(input_folder)} does not exist.")    
-    bulletin_path = input("Please enter the name of the earthquake bulletin file: ")
+    bulletin_path = ask_file_name("Please enter the name of the earthquake bulletin file", proj.recorded_name(input_folder, "project", "bulletin_file"))
     input_file_path = os.path.join(input_folder, bulletin_path)    
     with open(input_file_path, 'r') as file:
         bulletin_text = file.read()
