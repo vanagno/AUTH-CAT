@@ -244,7 +244,7 @@ def plot_bland_altman(modified_path, output_file):
     x is the mean of the two magnitudes and y their difference (recomputed -
     original). The solid line is the mean difference and the dashed lines the
     95% limits of agreement, mean difference +/- 1.96 standard deviations.
-    Events left with no station magnitude, whose recomputed value is missing,
+    Events left with no station magnitude (e.g if recomputed value is missing due to all their staitons being removed)
     are left out. Returns the numbers for the project record, or None when
     fewer than two events can be compared.
     """
