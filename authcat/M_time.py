@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from project import ask_file_name, open_project, shown
+from project import ask_file_name, open_project, shown, watermark
 
 
 def read_catalog(file_path):
@@ -62,6 +62,7 @@ def plot_magnitudes(df, output_file):
 
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
+    watermark()
     plt.savefig(output_file)
     plt.show()
 

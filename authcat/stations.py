@@ -53,7 +53,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import numpy as np
 import os
-from project import ask_file_name, open_project, shown, UTILITIES_DIR
+from project import ask_file_name, open_project, shown, UTILITIES_DIR, watermark
 
 def generate_stations_map(counts, station_coordinates, output_map_path):
     p_phase_counts = [phases['P'] for phases in counts.values()]
@@ -76,6 +76,7 @@ def generate_stations_map(counts, station_coordinates, output_map_path):
 
     plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, orientation='vertical', label='Number of P Phases')
     plt.title('Seismic stations used')
+    watermark()
     plt.savefig(output_map_path, dpi=400)
     plt.show()
     print(f"Map of the seismic stations used is saved to {shown(output_map_path)}")

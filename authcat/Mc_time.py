@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import convolve
-from project import ask_file_name, open_project, shown
+from project import ask_file_name, open_project, shown, watermark
 
 def read_catalog(file_path):
     df = pd.read_csv(file_path, sep=r"\s+", skiprows=1, 
@@ -33,6 +33,7 @@ def plot_mc(times, mc_values, filtered_mc_values, output_file):
     plt.legend()
     plt.grid(False)
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    watermark()
     plt.savefig(output_file)     
     plt.show()
     print(f"Mc vs time plot saved to {shown(output_file)}")

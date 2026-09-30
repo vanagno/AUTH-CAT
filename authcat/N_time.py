@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from project import ask_file_name, open_project, shown
+from project import ask_file_name, open_project, shown, watermark
 
 COLUMNS = ['Year', 'Stamp', 'Latitude', 'Longitude', 'Depth', 'Magnitude']
 
@@ -69,6 +69,7 @@ def calculate_cumulative_earthquakes(file_path, mc=None, figures_dir='Figures'):
     directory = figures_dir
     output_file = os.path.join(directory, 'cumulative_earthquakes.png')
     os.makedirs(directory, exist_ok=True)
+    watermark(fig)
     fig.savefig(output_file)
     plt.show()
     print(f"Cumulative earthquakes plot saved to {shown(output_file)}")

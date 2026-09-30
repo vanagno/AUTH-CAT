@@ -3,7 +3,7 @@ import numpy as np
 from datetime import datetime
 from scipy.odr import Model, ODR, RealData
 import os
-from project import ask_file_name, open_project, shown
+from project import ask_file_name, open_project, shown, watermark
 
 def parse_earthquake_data(bulletin_text):
     lines = bulletin_text.strip().split('\n')
@@ -95,6 +95,7 @@ def plot_travel_times(p_travel_times, sp_diff_times, output_file):
     plt.legend()
     plt.grid(True)
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    watermark()
     plt.savefig(output_file)
     plt.show()
     return 1 + slope, 1 + beta[0]

@@ -4,7 +4,7 @@ import sys
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import numpy as np
-from project import ask_file_name, open_project, shown
+from project import ask_file_name, open_project, shown, watermark
 
 FLAG_COLOR = 'purple'
 
@@ -156,6 +156,7 @@ def plot_station_data(station_counts, median_residuals, output_file, residual_th
     plt.xticks(rotation=45)
     plt.tight_layout()
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    watermark()
     plt.savefig(output_file, dpi=400) 
     plt.show()
     print(f"Median residual magnitudes plot saved to {shown(output_file)}")
@@ -286,6 +287,7 @@ def plot_bland_altman(modified_path, output_file):
     ax.set_ylabel('Recomputed - original magnitude')
     plt.tight_layout()
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    watermark()
     plt.savefig(output_file, dpi=400)
     plt.show()
     print(f"Bland-Altman plot saved to {shown(output_file)}")

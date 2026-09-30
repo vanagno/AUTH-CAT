@@ -4,7 +4,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import numpy as np
 import os
-from project import ask_file_name, open_project, shown
+from project import ask_file_name, open_project, shown, watermark
 
 def read_earthquake_catalog(file_path):
     """
@@ -84,6 +84,7 @@ def plot_earthquakes_final_rounded_ticks(latitudes, longitudes, magnitudes, outp
     plt.legend(handles=legend_patches, loc='upper left', title='Magnitudes')
     plt.title('Earthquake Locations')
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    watermark()
     plt.savefig(output_file)
     plt.show()
 

@@ -361,6 +361,23 @@ def shown(path: str | os.PathLike) -> str:
     return Path(*parts[1:]).as_posix()
 
 
+#: Stamped in the corner of every figure the scripts save.
+WATERMARK = "made with AUTH-CAT"
+
+
+def watermark(fig=None) -> None:
+    """Stamp WATERMARK, small and grey, in the bottom-right corner of ``fig``
+    (the current figure when omitted). Call it just before saving."""
+    import matplotlib.pyplot as plt  # imported here: only plotting scripts need it
+
+    fig = fig or plt.gcf()
+    if getattr(fig, "_authcat_watermark", False):
+        return  # a figure drawn on again is stamped once
+    fig.text(0.995, 0.005, WATERMARK, ha="right", va="bottom",
+             fontsize=7, color="grey", alpha=0.7)
+    fig._authcat_watermark = True
+
+
 def ask_file_name(prompt: str, default: str | None) -> str:
     """Ask for a file name; Enter takes ``default`` when there is one.
 

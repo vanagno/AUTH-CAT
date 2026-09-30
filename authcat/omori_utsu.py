@@ -51,7 +51,7 @@ except ImportError as exc:
         "Missing dependency 'corner'. Install it with: pip install corner"
     ) from exc
 
-from project import ask_file_name, open_project, shown
+from project import ask_file_name, open_project, shown, watermark
 
 
 META = {
@@ -630,6 +630,7 @@ def make_decay_plot(
     ax.set_title("Aftershock Decay")
     ax.legend()
     fig.tight_layout()
+    watermark(fig)
     fig.savefig(output_path, dpi=150)
     plt.close(fig)
 
@@ -645,6 +646,7 @@ def make_corner_plot(flat_samples: np.ndarray, output_path: Path) -> None:
         show_titles=True,
     )
     fig.tight_layout()
+    watermark(fig)
     fig.savefig(output_path, dpi=150)
     plt.close(fig)
 
