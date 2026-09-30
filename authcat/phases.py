@@ -597,7 +597,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"HYPO71 phase list  -> {shown(out)}: {rep.summary()}")
         written["hypo71"] = {"file": proj.rel(out), "events": rep.events_written,
                              "phases": rep.phases_written}
-    proj.update("phases2.py", {"phases": written}, bulletin=proj.rel(src),
+    proj.update("phases.py", {"phases": written}, bulletin=proj.rel(src),
                 min_phases=args.min_phases, max_tt=args.max_tt)
     return 0
 

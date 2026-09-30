@@ -274,7 +274,7 @@ def main():
                           "phase_sel.dat" if fmt == "hypodd" else "phases_sel.txt")
     write_filtered_data(output, phase_data, fmt)
     print(f"Phase list has been successfully updated to {shown(output)}")
-    proj.update("phases_sel2.py", {"phases": {"selection": {
+    proj.update("sel_phases.py", {"phases": {"selection": {
         "stations": stations, "file": proj.rel(output), "events": len(phase_data),
     }}}, phase_list=proj.rel(input_file_path), format=fmt)
 

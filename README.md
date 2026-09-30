@@ -22,8 +22,8 @@ Reference files shared by every project, such as the station list
 1. Start a project by downloading the bulletin for your target period and study area:
 
    ```
-   python getbul.py                    # asks for the project name, date range and lat/lon boundaries. Direct input in the command line
-   python getbul.py -p Arkal --start 2021-06-01 --end 2022-12-31 --min-lat 35.0 --max-lat 35.3 --min-lon 25.1 --max-lon 25.4 # Without further command line interaction
+   python bulletin.py                    # asks for the project name, date range and lat/lon boundaries. Direct input in the command line
+   python bulletin.py -p Arkal --start 2021-06-01 --end 2022-12-31 --min-lat 35.0 --max-lat 35.3 --min-lon 25.1 --max-lon 25.4 # Without further command line interaction
    ```
 
    or from a bulletin you already have (currently supports only AUTOLOC3 format):
@@ -35,7 +35,7 @@ Reference files shared by every project, such as the station list
 2. Run the desired scripts. Each one first asks which project to work
    on (pressing Enter takes the last one used), reads its input from that project and
    writes its output there. When input is piped in by a batch script, the last
-   project used is taken without asking. `catalog.py` and `phases2.py` also
+   project used is taken without asking. `catalog.py` and `phases.py` also
    accept `-p/--project`. When a script asks for a bulletin, catalogue or
    phase list, pressing Enter takes the project's own file (e.g. `Tyrnavos.bul`, `Tyrnavos_cat.txt`).
 

@@ -54,5 +54,5 @@ os.makedirs(directory, exist_ok=True)
 plt.savefig(output_file)
 plt.show()
 print(f"Histograms saved to {shown(output_file)}")
-proj.update("hist.py", {"figures": {"histograms": proj.rel(output_file)}},
+proj.update("histograms.py", {"figures": {"histograms": proj.rel(output_file)}},
             catalogue=proj.rel(input_file_path))

@@ -12,7 +12,7 @@ authcat/, whatever folder the scripts are run from:
         Figures/      plots
         Magnitudes/   station magnitude lists and their plot
 
-``getbul.py`` creates the project when it downloads the bulletin. Every later
+``bulletin.py`` creates the project when it downloads the bulletin. Every later
 script asks which project to work on -- Enter picks the last one used -- reads
 its input from that project's folders, writes its output there, and records
 what it found in ``<name>.json``.
@@ -392,7 +392,7 @@ def current_project(base: str | os.PathLike = PROJECTS_DIR) -> str | None:
 def _ask_project(base: Path) -> str:
     names = list_projects(base)
     if not names:
-        raise SystemExit(f"error: no projects in {base}/ yet -- run getbul.py or project.py first")
+        raise SystemExit(f"error: no projects in {base}/ yet -- run bulletin.py or project.py first")
     default = current_project(base) or (names[0] if len(names) == 1 else None)
     print("Projects:")
     for name in names:
@@ -426,7 +426,7 @@ def open_project(name: str | None = None, base: str | os.PathLike = PROJECTS_DIR
         name = _ask_project(base) if sys.stdin.isatty() else current_project(base)
         if name is None:
             raise SystemExit(
-                "error: no project given and none used before -- run getbul.py or project.py first"
+                "error: no project given and none used before -- run bulletin.py or project.py first"
             )
     try:
         proj = Project(name, base)
@@ -435,7 +435,7 @@ def open_project(name: str | None = None, base: str | os.PathLike = PROJECTS_DIR
     if not proj.json_path.is_file():
         raise SystemExit(
             f"error: there is no project {proj.name!r} in {base}/ -- "
-            f"run getbul.py or project.py to create it"
+            f"run bulletin.py or project.py to create it"
         )
     proj.create()  # restores any subfolder deleted by hand
     proj.make_current()
@@ -446,7 +446,7 @@ def open_project(name: str | None = None, base: str | os.PathLike = PROJECTS_DIR
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description="List the AUTH-CAT projects, or start one from a bulletin you "
-        "already have (getbul.py starts one by downloading the bulletin)."
+        "already have (bulletin.py starts one by downloading the bulletin)."
     )
     ap.add_argument("name", nargs="?", help="name of the project to create")
     ap.add_argument("-b", "--bulletin", help="bulletin file to copy into the new project")
@@ -464,7 +464,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.bulletin:
         ap.error("pass --bulletin FILE to start a project from a bulletin you have, "
-                 "or run getbul.py to download one")
+                 "or run bulletin.py to download one")
     try:
         proj = Project(args.name)
     except ValueError as exc:

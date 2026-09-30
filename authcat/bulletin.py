@@ -460,7 +460,7 @@ def main(argv=None):
     if bbox is not None:
         bounds = dict(zip(("latitude_min", "latitude_max", "longitude_min", "longitude_max"), bbox))
     proj.update(
-        "getbul.py",
+        "bulletin.py",
         {
             "project": {"bulletin_file": proj.rel(args.output)},
             "bulletin": {

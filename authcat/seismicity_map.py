@@ -89,5 +89,5 @@ if __name__ == "__main__":
     output_file = os.path.join(proj.figures_dir, 'Map_epic.png')
     plot_earthquakes_final_rounded_ticks(latitudes, longitudes, magnitudes, output_file)
     print(f"Epicentral map saved to {shown(output_file)}")
-    proj.update("map.py", {"figures": {"epicentral_map": proj.rel(output_file)}},
+    proj.update("seismicity_map.py", {"figures": {"epicentral_map": proj.rel(output_file)}},
                 catalogue=proj.rel(input_file_path))

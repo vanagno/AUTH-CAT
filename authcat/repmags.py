@@ -84,7 +84,7 @@ def main():
 
     updated = update_catalog_with_modified_magnitudes(input_file_path, mag_file_path, output_path)
     if updated is not None:
-        proj.update("replacemags.py", {"magnitude_regularization": {
+        proj.update("repmags.py", {"magnitude_regularization": {
             "modified_catalogue_file": proj.rel(output_path),
         }}, catalogue=proj.rel(input_file_path), modified_magnitudes=proj.rel(mag_file_path),
             events_updated=updated)

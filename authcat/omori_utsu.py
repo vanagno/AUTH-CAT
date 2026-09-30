@@ -803,7 +803,7 @@ def main() -> None:
 
     q16, q50, q84 = percentiles
     proj.update(
-        "omori.py",
+        "omori_utsu.py",
         {
             "modified_omori": {
                 "fit_start": start_mode,

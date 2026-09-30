@@ -111,7 +111,7 @@ if __name__ == "__main__":
     mc = prompt_for_mc()
     result, filtered_result = calculate_cumulative_earthquakes(
         path, mc, figures_dir=proj.figures_dir)
-    proj.update("cumevents2.py",
+    proj.update("N_time.py",
                 {"figures": {"cumulative_events": proj.rel(
                     os.path.join(proj.figures_dir, 'cumulative_earthquakes.png'))}},
                 catalogue=proj.rel(path), mc=mc, events=len(result),

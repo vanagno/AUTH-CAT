@@ -133,7 +133,7 @@ def unit_text(value: Any, suffix: str) -> str:
 
 
 def download_rows(bulletin: Any) -> list[list[Any]]:
-    """Rows for the period and area requested from getbul.py.
+    """Rows for the period and area requested from bulletin.py.
 
     None for a bulletin imported with project.py, which records neither.
     """
@@ -770,7 +770,7 @@ def add_wadati(
     )
 
 
-#: How omori.py chose each end of the sequence.
+#: How omori_utsu.py chose each end of the sequence.
 OMORI_BOUND_LABELS = {
     "catalogue_start": "start of catalogue",
     "largest_event": "largest earthquake",
