@@ -7,7 +7,7 @@ Seismological Station of the Aristotle University of Thessaloniki (AUTH-SS).
 
 ```
 pip install authcat                                          # from PyPI, once published
-pip install git+https://github.com/vanagno/AUTH-CAT@working  # straight from GitHub
+pip install git+https://github.com/vanagno/AUTH-CAT          # straight from GitHub
 ```
 
 This installs the `authcat` command and everything it needs. For working on

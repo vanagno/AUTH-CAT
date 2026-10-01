@@ -1,5 +1,5 @@
 # Builds the authcat package and uploads it to PyPI when a release is
-# published on GitHub.
+# published on GitHub. RELEASING.md describes the setup and the steps.
 name: Publish to PyPI
 
 on:
