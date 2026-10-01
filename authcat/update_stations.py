@@ -3,8 +3,8 @@
 
 ``authcat stup`` looks up the coordinates of every station AUTH-CAT needs --
 those already in regd.sta and those named in the bulletins of the projects
-in Projects/ -- and writes an updated regd.sta into the folder it is run
-from, where ``authcat sta`` uses it in place of the installed copy.
+in Projects/ -- and rewrites Utilities/regd.sta, the list ``authcat sta``
+uses, keeping the previous one as Utilities/regd.sta.bak.
 
 Coordinates come from the FDSN station services, the standard way seismic
 networks publish their metadata:
@@ -19,8 +19,8 @@ and NOA are asked instead.
 
 Each service is asked once for every station in the region the list covers;
 the station codes are matched here. A code found in more than one network is
-settled by the network the bulletins name it with, then by the position
-already listed; a code that still cannot be settled keeps its old line and is
+settled by the network the bulletins name it with, then by preferring
+permanent networks to temporary ones, then by the position already listed; a code that still cannot be settled keeps its old line and is
 reported. A position more than FAR_KM from the listed one is more likely
 another station with the same code than a move, so it is reported and the
 listed line kept, unless the bulletins confirm the station's network or
@@ -74,6 +74,9 @@ MARGIN = 1.0
 #: Region used when there is no station list to take it from: Greece and its
 #: neighbours.
 DEFAULT_REGION = (33.5, 43.5, 18.0, 31.0)
+#: IRIS's network of synthetic seismograms: never a real station.
+SYNTHETIC_NETWORKS = {"SY"}
+
 #: Positions further apart than this (km) are treated as different places.
 MOVED_KM = 1.0
 #: A service position further than this (km) from the listed one is kept out
@@ -298,6 +301,11 @@ def pick_epoch(epochs: list[Epoch], when: dt.datetime | None) -> Epoch | None:
     return max(epochs, key=lambda e: e.start or dt.datetime.min)
 
 
+def is_temporary(network: str) -> bool:
+    """FDSN temporary network codes start with a digit or X, Y or Z."""
+    return network[:1].isdigit() or network[:1] in "XYZ"
+
+
 def resolve(by_network: dict[str, list[Epoch]], networks_named: set[str],
             old: tuple[float, float] | None,
             when: dt.datetime | None) -> tuple[Epoch | None, str]:
@@ -306,7 +314,8 @@ def resolve(by_network: dict[str, list[Epoch]], networks_named: set[str],
     Returns the chosen epoch, or None, and a note for the report.
     """
     named = [n for n in by_network if n in networks_named]
-    networks = named or sorted(by_network)
+    permanent = [n for n in sorted(by_network) if not is_temporary(n)]
+    networks = named or permanent or sorted(by_network)
     picks = [p for n in networks if (p := pick_epoch(by_network[n], when))]
     if not picks:
         return None, "not operating on that date"
@@ -345,8 +354,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("-b", "--bulletin", action="append", default=[], metavar="FILE",
                     help="also look up the stations of this bulletin (repeatable); those "
                          "of every project in Projects/ are always included")
-    ap.add_argument("-o", "--output", default=STATION_FILE,
-                    help="file to write (default: regd.sta in this folder)")
+    ap.add_argument("-o", "--output", default=None,
+                    help="file to write instead of Utilities/regd.sta (which authcat sta uses)")
     ap.add_argument("--region", type=float, nargs=4,
                     metavar=("MINLAT", "MAXLAT", "MINLON", "MAXLON"),
                     help="region to ask for (default: the listed stations plus a "
@@ -366,12 +375,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="show what would change and write nothing")
     args = ap.parse_args(argv)
 
-    # The list to update: this folder's own, else the installed one.
-    local = Path(STATION_FILE)
-    source = local if local.is_file() else UTILITIES_DIR / STATION_FILE
-    old = read_station_list(source)
-    label = "regd.sta (current folder)" if source == local else "Utilities/regd.sta"
-    print(f"Station list: {len(old)} stations from {label}")
+    station_list = UTILITIES_DIR / STATION_FILE
+    old = read_station_list(station_list)
+    print(f"Station list: {len(old)} stations from Utilities/{STATION_FILE}")
 
     bulletins = project_bulletins() + [Path(b) for b in args.bulletin]
     missing_files = [b for b in bulletins if not b.is_file()]
@@ -417,7 +423,8 @@ def main(argv: list[str] | None = None) -> int:
             if key in seen:
                 continue
             seen.add(key)
-            candidates.setdefault(e.station, {}).setdefault(e.network, []).append(e)
+            if e.network not in SYNTHETIC_NETWORKS:
+                candidates.setdefault(e.station, {}).setdefault(e.network, []).append(e)
     if certificate_failures == len(services):
         print("  No service's certificate could be verified, so this Python has no usable "
               "list of certificate authorities.\n  With Python from python.org on macOS, run "
@@ -497,20 +504,30 @@ def main(argv: list[str] | None = None) -> int:
         print("\nDry run: nothing written.")
         return 0
 
-    output = Path(args.output)
+    output = Path(args.output) if args.output else station_list
+    in_utilities = output.resolve() == station_list.resolve()
+    label = f"Utilities/{STATION_FILE}" if in_utilities else shown(output)
     today = dt.date.today().isoformat()
     header = f"# Last updated {today} from FDSN station services by authcat stup"
     if args.date:
         header += f"; positions valid on {args.date:%Y-%m-%d}"
     lines = [header] + [f"{code:<4} {lat:.4f} {lon:.4f}" for code, (lat, lon) in sorted(final.items())]
-    if output.is_file():
-        shutil.copyfile(output, output.with_name(output.name + ".bak"))
-        print(f"\nPrevious {output.name} kept as {output.name}.bak")
-    tmp = output.with_name(output.name + ".part")
-    tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    os.replace(tmp, output)
-    print(f"Wrote {shown(output)} ({len(final)} stations)"
-          + ("; 'authcat sta' now uses it" if output.resolve() == local.resolve() else ""))
+    backed_up = False
+    try:
+        if output.is_file():
+            shutil.copyfile(output, output.with_name(output.name + ".bak"))
+            backed_up = True
+        tmp = output.with_name(output.name + ".part")
+        tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        os.replace(tmp, output)
+    except OSError as exc:
+        print(f"error: cannot write {label} ({exc.strerror or exc}); "
+              "use -o FILE to write the list elsewhere", file=sys.stderr)
+        return 1
+    if backed_up:
+        print(f"\nPrevious list kept as {label}.bak")
+    print(f"Wrote {label} ({len(final)} stations)"
+          + ("; 'authcat sta' uses it" if in_utilities else ""))
     return 0
 
 

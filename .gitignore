@@ -12,3 +12,6 @@ Projects/.current
 build/
 dist/
 *.egg-info/
+
+# Backup left by authcat stup
+authcat/Utilities/*.bak

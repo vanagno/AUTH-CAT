@@ -68,11 +68,14 @@ Projects/<name>/
 
 Reference files shared by every project, such as the station list
 `regd.sta` and the report logo `LOGO.png`, are installed with AUTH-CAT
-(`authcat/Utilities/`). A `regd.sta` in the folder you run `authcat` from is
-used instead of the installed one. `authcat stup` writes it for you: it looks up
-the stations in the list and in your projects' bulletins in the FDSN station
-services (every EIDA data centre, and IRIS) and saves an up-to-date `regd.sta` there, keeping the
-previous one as `regd.sta.bak`. `authcat stup --dry-run` shows what would change.
+(`authcat/Utilities/`). `authcat stup` keeps the station list up to date: it
+looks up the stations in the list and in your projects' bulletins in the FDSN
+station services (every EIDA data centre, and IRIS) and rewrites
+`Utilities/regd.sta`, keeping the previous one as `Utilities/regd.sta.bak`.
+`authcat stup --dry-run` shows what would change. With an editable install
+(`pip install -e .`) this updates the repository's own copy, ready to commit;
+with a regular install, upgrading AUTH-CAT replaces it with the list of the new
+release.
 
 ## Quickstart guide
 

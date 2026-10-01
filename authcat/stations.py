@@ -81,15 +81,9 @@ def generate_stations_map(counts, station_coordinates, output_map_path):
     plt.show()
     print(f"Map of the seismic stations used is saved to {shown(output_map_path)}")
 
-# A regd.sta in the folder authcat is run from (next to Projects/) is used in
-# place of the one installed with AUTH-CAT, so the station list can be kept
-# up to date without editing the installed copy.
-if os.path.isfile('regd.sta'):
-    regd_sta_file_path = os.path.abspath('regd.sta')
-    station_file = 'regd.sta (current folder)'
-else:
-    regd_sta_file_path = os.path.join(UTILITIES_DIR, 'regd.sta')
-    station_file = 'Utilities/regd.sta'
+# The station list; 'authcat stup' keeps it up to date.
+regd_sta_file_path = os.path.join(UTILITIES_DIR, 'regd.sta')
+station_file = 'Utilities/regd.sta'
 proj = open_project()
 input_folder = proj.input_dir
 if os.path.isdir(input_folder):
@@ -107,7 +101,6 @@ output_map_path = os.path.join(proj.figures_dir, 'Map_Stations.png')
 
 os.makedirs(proj.figures_dir, exist_ok=True)
 
-print(f"Station coordinates from {station_file}")
 station_coordinates = parse_station_coordinates(regd_sta_file_path)
 phase_arrivals = parse_phase_arrivals_v2(input_file_path)
 counts = count_phases(phase_arrivals)
