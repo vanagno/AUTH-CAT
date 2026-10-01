@@ -68,11 +68,14 @@ def generate_stations_map(counts, station_coordinates, output_map_path):
     norm = plt.Normalize(vmin=p_counts.min(), vmax=p_counts.max())
     cmap = plt.colormaps['viridis']
     
-    for station, phases in counts.items():
-        if phases['P'] >= threshold and station in station_coordinates:
-            lat, lon = station_coordinates[station]
-            ax.scatter(float(lon), float(lat), s=100, c=cmap(norm(phases['P'])), marker='^', edgecolor='k', linewidth=0.5, transform=ccrs.Geodetic())
-            ax.text(float(lon), float(lat) + 0.03, station, transform=ccrs.Geodetic(), fontsize=6, ha='center', va='bottom')
+    # One scatter call, coloured by the number of P phases
+    shown_stations = [(station, phases['P']) for station, phases in counts.items()
+                      if phases['P'] >= threshold and station in station_coordinates]
+    lons = [float(station_coordinates[station][1]) for station, _ in shown_stations]
+    lats = [float(station_coordinates[station][0]) for station, _ in shown_stations]
+    ax.scatter(lons, lats, s=100, c=[p for _, p in shown_stations], cmap=cmap, norm=norm, marker='^', edgecolor='k', linewidth=0.5, transform=ccrs.Geodetic())
+    for (station, _), lon, lat in zip(shown_stations, lons, lats):
+        ax.text(lon, lat + 0.03, station, transform=ccrs.Geodetic(), fontsize=6, ha='center', va='bottom')
 
     plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, orientation='vertical', label='Number of P Phases')
     plt.title('Seismic stations used')
