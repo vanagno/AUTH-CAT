@@ -31,15 +31,16 @@ options, where it has any.
 | `map` | `seismicity_map.py` | Plot the epicenters in the catalogue |
 | `hist` | `histograms.py` | Plot histograms of focal depths, magnitudes, RMS and azimuthal gaps |
 | `mt` | `M_time.py` | Plot the magnitudes over time |
-| `cum` / `nt` | `N_time.py` | Plot the cumulative number of earthquakes over time |
+| `nt` | `N_time.py` | Plot the cumulative number of earthquakes over time |
 | `mct` | `Mc_time.py` | Plot the Mc variations over time |
 | `mc` | `Mc_analysis.py` | Determine the Mc of the earthquake dataset |
 | `mags` | `magnitudes.py` | Plot the median residual of magnitudes for each station |
 | `rmag` | `repmags.py` | Replace the initial magnitude estimations |
 | `sta` | `stations.py` | Visualize the seismic stations with the number of picked phases |
+| `stup` | `update_stations.py` | Update the station list regd.sta from the FDSN station services |
 | `pha` | `phases.py` | Extract seismic phases from the bulletin |
 | `pse` | `sel_phases.py` | Select only the phases from certain seismic stations |
-| `vpvs` / `wad` | `wadati.py` | Vp/Vs estimation through the Wadati method |
+| `vpvs` | `wadati.py` | Vp/Vs estimation through the Wadati method |
 | `ou` | `omori_utsu.py` | Estimation of the modified Omori law (MOL) parameters |
 | `rep` | `report.py` | Generate the project report |
 | `project` | `project.py` | List the projects, or start one from a bulletin you already have |
@@ -67,8 +68,11 @@ Projects/<name>/
 
 Reference files shared by every project, such as the station list
 `regd.sta` and the report logo `LOGO.png`, are installed with AUTH-CAT
-(`authcat/Utilities/`). To use your own, up-to-date station list, put a
-`regd.sta` in the folder you run `authcat` from; `authcat sta` uses it instead.
+(`authcat/Utilities/`). A `regd.sta` in the folder you run `authcat` from is
+used instead of the installed one. `authcat stup` writes it for you: it looks up
+the stations in the list and in your projects' bulletins in the FDSN station
+services (EIDA, IRIS) and saves an up-to-date `regd.sta` there, keeping the
+previous one as `regd.sta.bak`. `authcat stup --dry-run` shows what would change.
 
 ## Quickstart guide
 

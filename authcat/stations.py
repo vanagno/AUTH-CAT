@@ -118,6 +118,9 @@ print(f"List of the number of P- and S-phases recorded for each station is saved
 generate_stations_map(counts, station_coordinates, output_map_path)
 
 missing = sorted(station for station in counts if station not in station_coordinates)
+if missing:
+    print(f"{len(missing)} stations have no coordinates in {station_file}; "
+          "'authcat stup' can look them up")
 proj.update("stations.py", {"station_phases": {
     "station_count": len(counts),
     "missing_coordinate_station_count": len(missing),
