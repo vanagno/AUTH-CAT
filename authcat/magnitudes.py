@@ -208,15 +208,24 @@ def compute_and_append_mean_magnitudes(directory, filename):
         current_event_id = None
         current_event_magnitude = None
         event_line_index = None
+        # Events with no station magnitude left get nan: authcat rmag keeps
+        # their original magnitude, and the Bland-Altman plot leaves them out.
+        no_station_left = 0
+
+        def event_line():
+            nonlocal no_station_left
+            if temp_magnitudes:
+                return f"{current_event_id}    {current_event_magnitude}    {np.mean(temp_magnitudes):.2f}\n"
+            no_station_left += 1
+            return f"{current_event_id}    {current_event_magnitude}    nan\n"
 
         for i, line in enumerate(lines):
-            if line.strip(): 
+            if line.strip():
                 parts = line.split()
-                if len(parts) == 2 and parts[0].startswith('auth'): 
+                if len(parts) == 2 and parts[0].startswith('auth'):
                     if current_event_id is not None:
-                        mean_magnitude = np.mean(temp_magnitudes)
-                        new_lines[event_line_index] = f"{current_event_id}    {current_event_magnitude}    {mean_magnitude:.2f}\n"
-                        temp_magnitudes = []  
+                        new_lines[event_line_index] = event_line()
+                        temp_magnitudes = []
                     current_event_id = parts[0]
                     current_event_magnitude = parts[1]
                     event_line_index = len(new_lines) 
@@ -226,14 +235,16 @@ def compute_and_append_mean_magnitudes(directory, filename):
                         temp_magnitudes.append(float(parts[1]))
                     new_lines.append(line) 
 
-        if current_event_id is not None and temp_magnitudes:
-            mean_magnitude = np.mean(temp_magnitudes)
-            new_lines[event_line_index] = f"{current_event_id}    {current_event_magnitude}    {mean_magnitude:.2f}\n"
+        if current_event_id is not None:
+            new_lines[event_line_index] = event_line()
 
         with open(full_path, 'w') as file:
             file.writelines(new_lines)
 
         print("Mean magnitudes computed and appended to the file.")
+        if no_station_left:
+            print(f"{no_station_left} events have no station magnitude left; "
+                  "they keep their original magnitude")
     except Exception as e:
         print(f"Failed to process the file: {e}")
 
@@ -323,7 +334,7 @@ def user_interaction(directory, flagged=()):
         bland_altman = None
         if input("Do you want to compute mean magnitudes for each event? (yes/no): ").lower() == 'yes':
             compute_and_append_mean_magnitudes(directory, "modified_magnitudes.txt")
-            print(f"New mean magnidutes were computed and written to {shown(os.path.join(directory, 'modified_magnitudes.txt'))}")
+            print(f"New mean magnitudes were computed and written to {shown(os.path.join(directory, 'modified_magnitudes.txt'))}")
             bland_altman = plot_bland_altman(os.path.join(directory, "modified_magnitudes.txt"),
                                              os.path.join(directory, "bland_altman.png"))
         return stations_to_eliminate, bland_altman

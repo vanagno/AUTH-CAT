@@ -14,6 +14,10 @@ becomes the new version (see `RELEASING.md`).
   *Unreleased* entries under the new version and updating `CITATION.cff`.
 
 ### Fixed
+- `authcat mags` / `authcat rmag`: an event whose station magnitudes were all
+  eliminated got `nan` as its magnitude in the corrected catalogue; it now
+  keeps its original magnitude, and the number of such events is reported.
+- `authcat mags`: "magnidutes" typo in a message.
 - `CITATION.cff` gives the version released, 0.1.1, and its date.
 
 ## [0.1.1] - 2026-10-01
