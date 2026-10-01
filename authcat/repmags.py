@@ -1,7 +1,10 @@
 import numpy as np
 import os
+from authcat.project import ask_file_name, open_project, shown
 
 def update_catalog_with_modified_magnitudes(catalog_path, modified_magnitudes_path, output_path):
+    """Write the catalogue with the recomputed magnitudes; return how many
+    events were changed, or None on failure."""
     modified_magnitudes = {}
     try:
         with open(modified_magnitudes_path, 'r') as file:
@@ -18,12 +21,14 @@ def update_catalog_with_modified_magnitudes(catalog_path, modified_magnitudes_pa
             catalog_lines = file.readlines()
 
         new_catalog = []
+        updated = 0
         for line in catalog_lines:
             parts = line.split()
             if len(parts) == 11 and parts[10].startswith('auth'):
                 event_id = parts[10]
                 if event_id in modified_magnitudes:
                     parts[5] = f"{modified_magnitudes[event_id]:4.2f}"
+                    updated += 1
                 formatted_line = f"{parts[0]} {parts[1]} "
                 formatted_line += f"{float(parts[2]):6.4f} {float(parts[3]):6.4f} "
                 formatted_line += f"{float(parts[4]):5.2f} {parts[5]:>5s} "
@@ -37,32 +42,36 @@ def update_catalog_with_modified_magnitudes(catalog_path, modified_magnitudes_pa
         with open(output_path, 'w') as file:
             file.writelines(new_catalog)
 
-        print("Catalog has been updated with modified magnitudes and saved to", output_path)
+        print("Catalog has been updated with modified magnitudes and saved to", shown(output_path))
 #        print ("You can now run transform.py if you prefer the 6-column format")
+        return updated
     except Exception as e:
         print(f"Error processing the catalog file: {e}")
 
 def main():
-    input_folder = "Results"
+    proj = open_project()
+    input_folder = proj.results_dir
     if os.path.isdir(input_folder):
-        print(f"{input_folder} folder:")
+        print(f"{shown(input_folder)} folder:")
         for filename in os.listdir(input_folder):
             print(filename)
     else:
-        print(f"The folder {input_folder} does not exist.")
+        print(f"The folder {shown(input_folder)} does not exist.")
         
-    catalog_path = input("Please provide the name of the initial catalogue: ")
+    catalog_path = ask_file_name("Please provide the name of the initial catalogue", proj.recorded_name(input_folder, "project", "catalogue_file"))
     input_file_path = os.path.join(input_folder, catalog_path)
     
-    mag_folder = "Magnitudes"
+    mag_folder = proj.magnitudes_dir
     if os.path.isdir(mag_folder):
-        print(f"{mag_folder} folder:")
+        print(f"{shown(mag_folder)} folder:")
         for filename in os.listdir(mag_folder):
             print(filename)
     else:
-        print(f"The folder {mag_folder} does not exist.")
+        print(f"The folder {shown(mag_folder)} does not exist.")
         
-    modified_magnitudes_path = input("Great! Now provide the modified mean magnitudes file\n(should be modified_magnitudes.txt if not renamed): ")
+    modified_magnitudes_path = ask_file_name(
+        "Great! Now provide the modified mean magnitudes file\n(should be modified_magnitudes.txt if not renamed)",
+        proj.recorded_name(mag_folder, "magnitude_regularization", "modified_magnitudes_file"))
     mag_file_path = os.path.join(mag_folder, modified_magnitudes_path)
     
     base_name = os.path.basename(input_file_path)
@@ -73,7 +82,12 @@ def main():
         print("One or more input files do not exist.")
         return
 
-    update_catalog_with_modified_magnitudes(input_file_path, mag_file_path, output_path)
+    updated = update_catalog_with_modified_magnitudes(input_file_path, mag_file_path, output_path)
+    if updated is not None:
+        proj.update("repmags.py", {"magnitude_regularization": {
+            "modified_catalogue_file": proj.rel(output_path),
+        }}, catalogue=proj.rel(input_file_path), modified_magnitudes=proj.rel(mag_file_path),
+            events_updated=updated)
 
 if __name__ == "__main__":
     main()

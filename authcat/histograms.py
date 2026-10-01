@@ -1,15 +1,17 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+from authcat.project import ask_file_name, open_project, shown, watermark
 
-input_folder = "Results"
+proj = open_project()
+input_folder = proj.results_dir
 if os.path.isdir(input_folder):
-	print(f"{input_folder} folder:")
+	print(f"{shown(input_folder)} folder:")
 	for filename in os.listdir(input_folder):
 		print(filename)
 else:
-	print(f"The folder {input_folder} does not exist.")
-file_path = input("Please enter the name of the earthquake catalogue: ")  
+	print(f"The folder {shown(input_folder)} does not exist.")
+file_path = ask_file_name("Please enter the name of the earthquake catalogue", proj.recorded_name(input_folder, "project", "catalogue_file"))  
 input_file_path = os.path.join(input_folder, file_path)    
 
 df = pd.read_csv(input_file_path, sep=r"\s+")
@@ -27,25 +29,31 @@ def add_stats_annotation(ax, data, color):
 
 #----- Histogram for Depth ------------#
 axs[0, 0].hist(df['Depth'], bins=20, color='skyblue', edgecolor='black')
-axs[0, 0].set_title('Depths')
+axs[0, 0].set_title('Depths (km)')
 add_stats_annotation(axs[0, 0], df['Depth'], 'black')
 #----- Histogram for Magnitudes -------#
 axs[0, 1].hist(df['M'], bins=20, color='orange', edgecolor='black')
-axs[0, 1].set_title('Magnitudes')
+axs[0, 1].set_title('Magnitudes (ML)')
 add_stats_annotation(axs[0, 1], df['M'], 'black')
 #----- Histogram for RMS --------------#
 axs[1, 0].hist(df['RMS'], bins=20, color='green', edgecolor='black')
-axs[1, 0].set_title('RMS')
+axs[1, 0].set_title('RMS (sec)')
 add_stats_annotation(axs[1, 0], df['RMS'], 'black')
 #----- Histogram for Azimuthal Gap ----#
 axs[1, 1].hist(df['AzGap'], bins=20, color='red', edgecolor='black')
-axs[1, 1].set_title('Azimuthal Gaps')
+axs[1, 1].set_title('Azimuthal Gaps (°)')
 add_stats_annotation(axs[1, 1], df['AzGap'], 'black')
 
+for ax in axs.flat:
+    ax.set_ylabel('Counts')
+    ax.set_xlim(left=0)
 plt.tight_layout()
-directory = 'Figures'
+directory = proj.figures_dir
 output_file = os.path.join(directory,'Histograms.png')
 os.makedirs(directory, exist_ok=True)
+watermark()
 plt.savefig(output_file)
 plt.show()
-print(f"Histograms saved to Figures/Histograms.png")
+print(f"Histograms saved to {shown(output_file)}")
+proj.update("histograms.py", {"figures": {"histograms": proj.rel(output_file)}},
+            catalogue=proj.rel(input_file_path))

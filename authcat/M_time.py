@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from authcat.project import ask_file_name, open_project, shown, watermark
 
 
 def read_catalog(file_path):
@@ -33,7 +34,7 @@ def read_catalog(file_path):
     return df.set_index('DateTime')
 
 
-def plot_magnitudes(df):
+def plot_magnitudes(df, output_file):
     plt.figure(figsize=(12, 6))
 
     sizes = df['Magnitude'] ** 2 * 10
@@ -43,7 +44,7 @@ def plot_magnitudes(df):
         df['Magnitude'],
         s=sizes,
         alpha=0.5,
-        edgecolors='none',
+        edgecolors='black',
         color='blue'
     )
 
@@ -59,30 +60,30 @@ def plot_magnitudes(df):
     plt.gcf().autofmt_xdate()
     plt.grid(False)
 
-    directory = 'Figures'
-    output_file = os.path.join(directory, 'M_time.png')
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-    os.makedirs(directory, exist_ok=True)
-
+    watermark()
     plt.savefig(output_file)
     plt.show()
 
 
 # Folder containing earthquake catalogues
-input_folder = "Results"
+proj = open_project()
+input_folder = proj.results_dir
 
 if os.path.isdir(input_folder):
-    print(f"{input_folder} folder:")
+    print(f"{shown(input_folder)} folder:")
 
     for filename in os.listdir(input_folder):
         print(filename)
 else:
-    print(f"The folder {input_folder} does not exist.")
+    print(f"The folder {shown(input_folder)} does not exist.")
 
 
 # Ask user which catalogue to process
-file_path = input(
-    "Please enter the name of the earthquake catalogue: "
+file_path = ask_file_name(
+    "Please enter the name of the earthquake catalogue",
+    proj.recorded_name(input_folder, "project", "catalogue_file"),
 )
 
 input_file_path = os.path.join(input_folder, file_path)
@@ -93,7 +94,10 @@ df = read_catalog(input_file_path)
 
 
 # Create plot
-plot_magnitudes(df)
+output_file = os.path.join(proj.figures_dir, 'M_time.png')
+plot_magnitudes(df, output_file)
 
 
-print("Magnitudes vs time plot saved to Figures/M_time.png")
+print(f"Magnitudes vs time plot saved to {shown(output_file)}")
+proj.update("M_time.py", {"figures": {"magnitude_time": proj.rel(output_file)}},
+            catalogue=proj.rel(input_file_path))

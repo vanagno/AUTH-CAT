@@ -1,0 +1,506 @@
+{
+  "schema_version": "1.1",
+  "project": {
+    "name": "Tyrnavos",
+    "created": "2026-09-24T18:19:09+03:00",
+    "bulletin_file": "Input/Tyrnavos.bul",
+    "catalogue_file": "Results/Tyrnavos_cat.txt",
+    "catalogue_6col_file": "Results/Tyrnavos_cat_6col.txt",
+    "catalogue_quakeml_file": "Results/Tyrnavos_cat.xml"
+  },
+  "bulletin": {
+    "available": true,
+    "source": "https://seismo.auth.gr/wp-content/uploads/CATALOGS",
+    "start_date": "2021-03-03",
+    "end_date": "2021-04-03",
+    "bounds": {
+      "latitude_min": 39.5,
+      "latitude_max": 39.9,
+      "longitude_min": 21.85,
+      "longitude_max": 22.35
+    },
+    "events_examined": 3088,
+    "events_written": 1753,
+    "months_missing": [],
+    "months_failed": []
+  },
+  "catalogue": {
+    "available": true,
+    "total_events": 1753,
+    "start_time": "2021-03-03T08:00:37.674",
+    "end_time": "2021-04-03T23:52:26.598",
+    "latitude_min": 39.5682,
+    "latitude_max": 39.87683,
+    "longitude_min": 21.85791,
+    "longitude_max": 22.33374,
+    "depth_min_km": 0.049,
+    "depth_max_km": 26.455,
+    "magnitude_min": 0.27,
+    "magnitude_max": 5.96,
+    "largest_event": {
+      "time": "2021-03-03T10:16:08.367",
+      "magnitude": 5.96,
+      "latitude": 39.73218,
+      "longitude": 22.21802,
+      "depth_km": 0.686,
+      "event_id": "auth2021eiga"
+    }
+  },
+  "magnitude_of_completeness": {
+    "available": true,
+    "maxc": {
+      "mc": 2.5,
+      "b_value": 0.93,
+      "b_value_uncertainty": 0.03
+    },
+    "gft": {
+      "mc": 2.4,
+      "b_value": 0.89,
+      "b_value_uncertainty": 0.03,
+      "goodness_of_fit_percent": 95
+    },
+    "mbs": {
+      "mc": 2.4,
+      "b_value": 0.89,
+      "b_value_uncertainty": 0.03
+    },
+    "summary_file": "Results/Mc_summary.txt",
+    "figures": {
+      "fmd": "Figures/FMD_plot.png",
+      "maxc": "Figures/MAXC.png",
+      "gft_residuals": "Figures/GFT_plot.png",
+      "gft": "Figures/GFT.png",
+      "mbs_stability": "Figures/MBS_plot.png",
+      "mbs": "Figures/MBS.png"
+    }
+  },
+  "magnitude_regularization": {
+    "available": true,
+    "residual_threshold": 0.4,
+    "flagged_stations": [
+      "PAIG",
+      "THE",
+      "LKR"
+    ],
+    "excluded_stations": [
+      "PAIG",
+      "THE",
+      "LKR"
+    ],
+    "magnitudes_file": "Magnitudes/magnitudes.txt",
+    "modified_magnitudes_file": "Magnitudes/modified_magnitudes.txt",
+    "modified_catalogue_file": "Results/Tyrnavos_cat_mod.txt",
+    "figure": "Magnitudes/magnitudes.png",
+    "bland_altman": {
+      "figure": null,
+      "events": null,
+      "mean_difference": null,
+      "lower_limit": null,
+      "upper_limit": null
+    }
+  },
+  "station_phases": {
+    "available": true,
+    "station_count": 116,
+    "missing_coordinate_station_count": 16,
+    "missing_coordinate_stations": [
+      "AOS2",
+      "BCI",
+      "E02",
+      "KANL",
+      "MMAA",
+      "PLD",
+      "PRR",
+      "PUK",
+      "STC",
+      "TST",
+      "TYR2A",
+      "TYR3",
+      "TYR5",
+      "TYR6",
+      "VRKS",
+      "VTS1"
+    ],
+    "counts_file": "Results/station_phases_counts.txt",
+    "map_figure": "Figures/Map_Stations.png"
+  },
+  "phases": {
+    "available": true,
+    "hypodd": {
+      "file": "Results/phase.dat",
+      "events": 1753,
+      "phases": 48015
+    },
+    "hypo71": {
+      "file": "Results/phases.txt",
+      "events": 1753,
+      "phases": 47931
+    },
+    "selection": {
+      "stations": [
+        "KZN",
+        "LIT",
+        "THL"
+      ],
+      "file": "Results/phase_sel.dat",
+      "events": 1723
+    }
+  },
+  "wadati": {
+    "available": true,
+    "pairs": 18453,
+    "vp_vs": {
+      "least_squares": 1.77,
+      "orthogonal_regression": 1.78
+    },
+    "figure": "Figures/Wadati.png"
+  },
+  "modified_omori": {
+    "available": true,
+    "fit_start": "catalogue_start",
+    "fit_end": null,
+    "start_time": "2021-03-03T08:00:37.674000",
+    "end_time": null,
+    "magnitude_threshold": null,
+    "events": 1753,
+    "K": 5947.99,
+    "c": 4.97,
+    "p": 1.77,
+    "mcmc": {
+      "K": {
+        "median": null,
+        "p16": null,
+        "p84": null
+      },
+      "c": {
+        "median": null,
+        "p16": null,
+        "p84": null
+      },
+      "p": {
+        "median": null,
+        "p16": null,
+        "p84": null
+      }
+    },
+    "figure": null,
+    "mcmc_figure": null,
+    "fit_data_file": null
+  },
+  "figures": {
+    "epicentral_map": "Figures/Map_epic.png",
+    "histograms": "Figures/Histograms.png",
+    "magnitude_time": "Figures/M_time.png",
+    "cumulative_events": "Figures/cumulative_earthquakes.png",
+    "mc_time": "Figures/Mc_time.png"
+  },
+  "history": [
+    {
+      "time": "2026-09-24T18:19:11+03:00",
+      "script": "getbul.py",
+      "sections": [
+        "project",
+        "bulletin"
+      ]
+    },
+    {
+      "time": "2026-09-24T18:25:28+03:00",
+      "script": "catalog.py",
+      "sections": [
+        "project",
+        "catalogue"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul",
+        "format": "all"
+      }
+    },
+    {
+      "time": "2026-09-24T18:28:55+03:00",
+      "script": "map.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-24T18:29:58+03:00",
+      "script": "hist.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-24T18:49:13+03:00",
+      "script": "hist.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-24T18:54:08+03:00",
+      "script": "hist.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-24T18:55:57+03:00",
+      "script": "M_time.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-24T18:56:21+03:00",
+      "script": "M_time.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-24T18:57:15+03:00",
+      "script": "cumevents2.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat_6col.txt",
+        "mc": 1.3,
+        "events": 1753,
+        "events_above_mc": 1621
+      }
+    },
+    {
+      "time": "2026-09-24T18:57:31+03:00",
+      "script": "cumevents2.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat_6col.txt",
+        "mc": 4.0,
+        "events": 1753,
+        "events_above_mc": 29
+      }
+    },
+    {
+      "time": "2026-09-24T18:57:48+03:00",
+      "script": "cumevents2.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat_6col.txt",
+        "mc": 2.0,
+        "events": 1753,
+        "events_above_mc": 1306
+      }
+    },
+    {
+      "time": "2026-09-24T18:58:36+03:00",
+      "script": "Mc_time.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt",
+        "window_length": 200,
+        "filter_length": 10
+      }
+    },
+    {
+      "time": "2026-09-24T18:59:07+03:00",
+      "script": "Mc_analysis.py",
+      "sections": [
+        "magnitude_of_completeness"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat_6col.txt"
+      }
+    },
+    {
+      "time": "2026-09-24T19:01:12+03:00",
+      "script": "magnitudes.py",
+      "sections": [
+        "magnitude_regularization"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul"
+      }
+    },
+    {
+      "time": "2026-09-24T19:04:25+03:00",
+      "script": "replacemags.py",
+      "sections": [
+        "magnitude_regularization"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt",
+        "modified_magnitudes": "Magnitudes/modified_magnitudes.txt",
+        "events_updated": 1753
+      }
+    },
+    {
+      "time": "2026-09-24T19:45:13+03:00",
+      "script": "stations.py",
+      "sections": [
+        "station_phases"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul",
+        "station_file": "Utilities/regd.sta"
+      }
+    },
+    {
+      "time": "2026-09-24T19:46:25+03:00",
+      "script": "phases2.py",
+      "sections": [
+        "phases"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul",
+        "min_phases": 4,
+        "max_tt": null
+      }
+    },
+    {
+      "time": "2026-09-24T19:48:11+03:00",
+      "script": "phases_sel2.py",
+      "sections": [
+        "phases"
+      ],
+      "details": {
+        "phase_list": "Results/phase.dat",
+        "format": "hypodd"
+      }
+    },
+    {
+      "time": "2026-09-24T19:49:08+03:00",
+      "script": "wadati.py",
+      "sections": [
+        "wadati"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul"
+      }
+    },
+    {
+      "time": "2026-09-24T19:50:42+03:00",
+      "script": "omori2.py",
+      "sections": [
+        "modified_omori"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-24T19:57:51+03:00",
+      "script": "wadati.py",
+      "sections": [
+        "wadati"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul"
+      }
+    },
+    {
+      "time": "2026-09-24T20:01:22+03:00",
+      "script": "magnitudes.py",
+      "sections": [
+        "magnitude_regularization"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul"
+      }
+    },
+    {
+      "time": "2026-09-24T20:02:08+03:00",
+      "script": "magnitudes.py",
+      "sections": [
+        "magnitude_regularization"
+      ],
+      "details": {
+        "bulletin": "Input/Tyrnavos.bul"
+      }
+    },
+    {
+      "time": "2026-09-30T16:11:18+03:00",
+      "script": "map.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-30T16:11:58+03:00",
+      "script": "map.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-30T16:12:45+03:00",
+      "script": "map.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-30T16:13:27+03:00",
+      "script": "map.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-30T16:13:44+03:00",
+      "script": "map.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    },
+    {
+      "time": "2026-09-30T16:14:01+03:00",
+      "script": "map.py",
+      "sections": [
+        "figures"
+      ],
+      "details": {
+        "catalogue": "Results/Tyrnavos_cat.txt"
+      }
+    }
+  ]
+}

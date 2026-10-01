@@ -1,4 +1,5 @@
-modules_to_check = ['matplotlib', 'pandas', 'numpy', 'basemap','basemap-data-hires', 'cartopy', 'corner', 'emcee', 'scipy']
+# Named as pip installs them
+modules_to_check = ['matplotlib', 'pandas', 'numpy', 'cartopy', 'corner', 'emcee', 'scipy', 'reportlab']
 
 def display_logo():
     logo = """

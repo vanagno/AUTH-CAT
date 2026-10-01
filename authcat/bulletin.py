@@ -14,6 +14,11 @@ Filtering is based on the fields in each event's Origin section:
 Matching event blocks are copied as raw bytes (apart from normalising line
 endings to \n), so the complete original event content is retained.
 
+This is the first step of an analysis (``authcat bul``): it asks for a project
+name and creates Projects/<name>/ (see project.py), puts the bulletin in its Input folder and
+starts the project record, Projects/<name>/<name>.json. Every later script
+works inside that project.
+
 Standard library only (Python 3.8+).
 """
 
@@ -26,6 +31,8 @@ import sys
 import time
 import urllib.error
 import urllib.request
+
+from authcat.project import Project, shown
 
 DEFAULT_BASE_URL = "https://seismo.auth.gr/wp-content/uploads/CATALOGS"
 USER_AGENT = "auth-bulletin-downloader/2.0 (+python-urllib)"
@@ -212,6 +219,37 @@ def validate_bbox(parser, args):
     return None
 
 
+def choose_project(parser, name, interactive):
+    """Return the new project to download into, asking again at a terminal.
+
+    A name already holding a bulletin is refused, so every download starts a
+    distinct project. One left without a bulletin -- by a download that found
+    nothing -- can be reused.
+    """
+    if name is None and not interactive:
+        parser.error("--project is required when not run interactively")
+    if name is None:
+        print("Each analysis is kept in its own project folder, Projects/<name>/.")
+    while True:
+        if name is None:
+            try:
+                name = input("Project name: ").strip()
+            except EOFError:
+                raise SystemExit("\nNo input available; pass --project instead.")
+        try:
+            proj = Project(name)
+            if proj.has_bulletin():
+                raise ValueError("project %r already has a bulletin (%s); choose another name"
+                                 % (proj.name, proj.root))
+        except ValueError as exc:
+            if not interactive:
+                parser.error(str(exc))
+            print("  " + str(exc))
+            name = None
+            continue
+        return proj
+
+
 def main(argv=None):
     today = dt.date.today()
     parser = argparse.ArgumentParser(
@@ -222,8 +260,12 @@ def main(argv=None):
                         help="first event date to include (inclusive)")
     parser.add_argument("--end", type=parse_date, default=None, metavar="YYYY-MM-DD",
                         help="last event date to include (inclusive)")
+    parser.add_argument("-p", "--project", default=None,
+                        help="project name: everything for this analysis goes in "
+                             "Projects/<name>/ (asked interactively if omitted)")
     parser.add_argument("-o", "--output", default=None,
-                        help="output .bul filename (asked interactively if omitted)")
+                        help="bulletin filename inside the project's Input folder "
+                             "(asked interactively if omitted; default <project>.bul)")
     parser.add_argument("--min-lat", type=float, default=None)
     parser.add_argument("--max-lat", type=float, default=None)
     parser.add_argument("--min-lon", type=float, default=None)
@@ -243,6 +285,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     interactive = sys.stdin.isatty()
+
+    proj = choose_project(parser, args.project, interactive)
 
     if args.start is None:
         if not interactive:
@@ -278,11 +322,11 @@ def main(argv=None):
                 parser.error("minimum geographic limits must not exceed maximum limits")
             bbox = (min_lat, max_lat, min_lon, max_lon)
 
-    suggested = "auth_bulletin_%s_%s.bul" % (args.start.isoformat(), args.end.isoformat())
+    suggested = proj.name + ".bul"
     if args.output is None:
         if interactive:
             try:
-                answer = input("Output filename [blank = %s]: " % suggested).strip()
+                answer = input("Bulletin filename [blank = %s]: " % suggested).strip()
             except EOFError:
                 answer = ""
             args.output = answer or suggested
@@ -291,6 +335,8 @@ def main(argv=None):
 
     if not os.path.splitext(args.output)[1]:
         args.output += ".bul"
+    proj.create()
+    args.output = str(proj.input_dir / os.path.basename(args.output))
 
     if (args.start.year, args.start.month) < FIRST_AVAILABLE:
         print("note: the site lists bulletins from %d-%02d onwards; earlier months will be reported as missing." % FIRST_AVAILABLE,
@@ -394,7 +440,7 @@ def main(argv=None):
 
     os.replace(out_tmp, args.output)
 
-    print("\nWrote %s (%d bytes)" % (args.output, n_bytes))
+    print("\nWrote %s (%d bytes)" % (shown(args.output), n_bytes))
     print("  monthly files: downloaded %d   from cache %d   missing %d   failed %d"
           % (downloaded, cached, len(missing), len(failed)))
     print("  events examined: %d" % events_examined)
@@ -409,6 +455,27 @@ def main(argv=None):
         print("  not available: " + ", ".join(missing))
     if failed:
         print("  FAILED (re-run to retry): " + ", ".join(failed), file=sys.stderr)
+
+    bounds = None
+    if bbox is not None:
+        bounds = dict(zip(("latitude_min", "latitude_max", "longitude_min", "longitude_max"), bbox))
+    proj.update(
+        "bulletin.py",
+        {
+            "project": {"bulletin_file": proj.rel(args.output)},
+            "bulletin": {
+                "source": args.base_url,
+                "start_date": args.start.isoformat(),
+                "end_date": args.end.isoformat(),
+                "bounds": bounds,
+                "events_examined": events_examined,
+                "events_written": events_written,
+                "months_missing": missing,
+                "months_failed": failed,
+            },
+        },
+    )
+    proj.make_current()
 
     return 1 if failed else 0
 

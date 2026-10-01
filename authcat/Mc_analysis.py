@@ -3,19 +3,21 @@ import pandas as pd
 import math
 import matplotlib.pyplot as plt
 import os
+from authcat.project import ask_file_name, open_project, shown, watermark
 
 plt.rcParams["figure.figsize"] = (8, 5)
 
-input_folder = "Results"
+proj = open_project()
+input_folder = proj.results_dir
 if os.path.isdir(input_folder):
-    print(f"{input_folder} folder:")
+    print(f"{shown(input_folder)} folder:")
     for filename in os.listdir(input_folder):
         print(filename)
 else:
-    print(f"The folder {input_folder} does not exist.")
-file_path = input("Please enter the file path of the 6-column earthquake catalogue: ") 
+    print(f"The folder {shown(input_folder)} does not exist.")
+file_path = ask_file_name("Please enter the file path of the 6-column earthquake catalogue", proj.recorded_name(input_folder, "project", "catalogue_6col_file")) 
 input_file_path = os.path.join(input_folder, file_path)    
-catalog = pd.read_csv(input_file_path, delim_whitespace=True, header=None, usecols=[5])
+catalog = pd.read_csv(input_file_path, sep=r"\s+", header=None, usecols=[5])
 catalog.columns = ['mw']
 
 #------------------- Frequency-magnitude distribution --------------------#
@@ -34,6 +36,7 @@ def fmd(mag, mbin):
 
 cat_mi, cat_nbmag, cat_cumnbmag = fmd(mag=catalog['mw'], mbin=0.1)
 
+plt.figure()
 plt.plot(cat_mi, cat_cumnbmag, marker='o', markersize=8, markerfacecolor='red', linestyle='None', color='black', label="Cumulative")
 plt.plot(cat_mi, cat_nbmag, marker='s', markersize=8, markerfacecolor='white', linestyle='None', color='black', label="Incremental")
 plt.yscale('log')
@@ -41,12 +44,13 @@ plt.xlabel('Magnitude')
 plt.ylabel('Frequency')
 plt.title('FMD plot')
 plt.legend(loc="upper right")
-directory = 'Figures'
+directory = proj.figures_dir
 output_file = os.path.join(directory,'FMD_plot.png')
 os.makedirs(directory, exist_ok=True)
+watermark()
 plt.savefig(output_file)
 plt.show()
-print(f"Frequency-Magnitude distribution plot saved to Figures/FMD_plot.png")
+print(f"Frequency-Magnitude distribution plot saved to {shown(output_file)}")
 
 
 #---------- b-value estimation with the maximum likelihood method  -------#
@@ -69,6 +73,12 @@ def b_est(mag, mbin, mc):
 
     return a, b, aki_unc, shibolt_unc
 
+
+def method_result(mc, b, unc, **extra):
+    """One method's entry in the summary and the project record."""
+    return {"mc": round(float(mc), 1), "b_value": round(float(b), 2),
+            "b_value_uncertainty": round(float(unc), 2), **extra}
+
 #------------- Mc estimation with the MAXC method ------------------------#
 
 def get_maxc(mag, mbin):
@@ -78,7 +88,9 @@ def get_maxc(mag, mbin):
     
 cat_mc = get_maxc(mag = catalog['mw'], mbin = 0.1)
 cat_a, cat_b, cat_aki_unc, cat_shibolt_unc = b_est(mag = catalog['mw'], mbin = 0.1, mc = cat_mc)
+maxc_result = method_result(cat_mc, cat_b, cat_shibolt_unc)
 
+plt.figure()
 plt.plot(cat_mi, cat_cumnbmag, marker='o', markersize=8, markerfacecolor='red', linestyle='None', color='black')
 plt.plot(cat_mi, cat_nbmag, marker='s', markersize=8, markerfacecolor='white', linestyle='None', color='black')
 plt.plot(cat_mi, (10**(cat_a - (cat_b * cat_mi))), linewidth=3, color='black')
@@ -94,9 +106,10 @@ plt.text(x=cat_mc+0.07, y=2, s="Mc=" + str(round(cat_mc, 1)))
 plt.text(x=cat_mc+0.07, y=1.2, s="b-value = " + str(round(cat_b, 2)) + " +/- " + str(round(cat_shibolt_unc, 2)))
 output_file = os.path.join(directory,'MAXC.png')
 os.makedirs(directory, exist_ok=True)
+watermark()
 plt.savefig(output_file)
 plt.show()
-print(f"MAXC plot saved to Figures/MAXC.png")
+print(f"MAXC plot saved to {shown(output_file)}")
 
 #---------------- Mc estimation with the GFT method ----------------------#
 
@@ -122,20 +135,21 @@ def get_gft(mag, mbin):
     R_to_test = [95, 90]
 
     GFT_test = [np.where(R <= (100 - conf_level)) for conf_level in R_to_test]
-    for i in range(len(R_to_test)+1):
-        if i == (len(R_to_test) + 1):
-            mc = this_maxc
-            print("No fits within confidence levels, using MAXC estimate")
+    # The confidence level reached, or None when neither was and MAXC stands in
+    mc, conf = this_maxc, None
+    for conf_level, test in zip(R_to_test, GFT_test):
+        if len(test[0]) > 0:
+            mc = round(this_fmd[0][test[0][0]], 1)
+            conf = conf_level
             break
-        else:
-            if len(GFT_test[i][0]) > 0:
-                mc = round(this_fmd[0][GFT_test[i][0][0]], 1)
-                break
+    else:
+        print("No fits within confidence levels, using MAXC estimate")
     
-    return mc, this_fmd[0], R
+    return mc, this_fmd[0], R, conf
 
 cat_gft = get_gft(mag = catalog['mw'], mbin = 0.1) # GFT completeness magnitude
 
+plt.figure()
 plt.plot(cat_gft[1], cat_gft[2], color="red")
 plt.plot(cat_gft[1], cat_gft[2], 'D', color="darkred", markersize=6, label="GFT for each cut-off mag")
 plt.vlines(cat_gft[0], ymin=0, ymax=100, linestyles='dashed', label="GFT Mc = " + str(round(cat_gft[0], 1)))
@@ -151,13 +165,16 @@ plt.title('GFT plot')
 plt.legend(loc='upper right')
 output_file = os.path.join(directory,'GFT_plot.png')
 os.makedirs(directory, exist_ok=True)
+watermark()
 plt.savefig(output_file)
 plt.show()
-print(f"Goodness-of-Fit residual plot saved to Figures/GFT_plot.png")
+print(f"Goodness-of-Fit residual plot saved to {shown(output_file)}")
 
 cat_mc = cat_gft[0] # GFT completeness magnitude
 cat_a, cat_b, cat_aki_unc, cat_shibolt_unc = b_est(mag = catalog['mw'], mbin = 0.1, mc = cat_mc)
+gft_result = method_result(cat_mc, cat_b, cat_shibolt_unc, goodness_of_fit_percent=cat_gft[3])
 
+plt.figure()
 plt.plot(cat_mi, cat_cumnbmag, marker='o', markersize=8, markerfacecolor='red', linestyle='None', color='black')
 plt.plot(cat_mi, cat_nbmag, marker='s', markersize=8, markerfacecolor='white', linestyle='None', color='black')
 plt.plot(cat_mi, (10**(cat_a - (cat_b * cat_mi))), linewidth=3, color='black')
@@ -171,9 +188,10 @@ plt.text(x=cat_mc+0.07, y=2, s="Mc = " + str(round(cat_mc, 1)))
 plt.text(x=cat_mc+0.07, y=1.2, s="b-value = " + str(round(cat_b, 2)) + " +/- " + str(round(cat_shibolt_unc, 2)))
 output_file = os.path.join(directory,'GFT.png')
 os.makedirs(directory, exist_ok=True)
+watermark()
 plt.savefig(output_file)
 plt.show()
-print(f"Goodness-of-Fit plot saved to Figures/GFT.png")
+print(f"Goodness-of-Fit plot saved to {shown(output_file)}")
 
 #---------------- Mc estimation with the MBS method ----------------------#
 
@@ -219,6 +237,7 @@ def get_mbs(mag, mbin, dM = 0.4, min_mc = -3):
     
 cat_mbs = get_mbs(mag = catalog['mw'], mbin = 0.1)
 
+plt.figure()
 plt.plot(cat_mbs[1], cat_mbs[2], '.', color='k', label="b-value at cut-off magnitude")
 plt.errorbar(cat_mbs[1], cat_mbs[2], yerr=cat_mbs[4], fmt='.', color='k')
 plt.plot(cat_mbs[1], cat_mbs[3], '.', color="c", label="avg b between cut-off mag and cut-off mag + dM")
@@ -230,13 +249,16 @@ plt.ylabel('b-value estimate')
 plt.title('MBS plot')
 output_file = os.path.join(directory,'MBS_plot.png')
 os.makedirs(directory, exist_ok=True)
+watermark()
 plt.savefig(output_file)
 plt.show()
-print(f"b-value stability plot saved to Figures/MBS_plot.png")
+print(f"b-value stability plot saved to {shown(output_file)}")
 
 cat_mc = cat_mbs[0]
 cat_a, cat_b, cat_aki_unc, cat_shibolt_unc = b_est(mag = catalog['mw'], mbin = 0.1, mc = cat_mc)
+mbs_result = method_result(cat_mc, cat_b, cat_shibolt_unc)
 
+plt.figure()
 plt.plot(cat_mi, cat_cumnbmag, marker='o', markersize=8, markerfacecolor='red', linestyle='None', color='black')
 plt.plot(cat_mi, cat_nbmag, marker='s', markersize=8, markerfacecolor='white', linestyle='None', color='black')
 plt.plot(cat_mi, (10**(cat_a - (cat_b * cat_mi))), linewidth=3, color='black')
@@ -252,28 +274,39 @@ plt.text(x=cat_mc+0.07, y=2, s="Mc = " + str(round(cat_mc, 1)))
 plt.text(x=cat_mc+0.07, y=1.2, s="b-value = " + str(round(cat_b, 2)) + " +/- " + str(round(cat_shibolt_unc, 2)))
 output_file = os.path.join(directory,'MBS.png')
 os.makedirs(directory, exist_ok=True)
+watermark()
 plt.savefig(output_file)
 plt.show()
-print(f"MBS plot saved to Figures/MBS.png")
+print(f"MBS plot saved to {shown(output_file)}")
 
 summary_text = f"""
 Summary of Mc analysis and b-values
 
 MAXC Method:
-- Mc: {cat_mc}
-- b-value: {cat_b} +/- {cat_shibolt_unc}
+- Mc: {maxc_result['mc']}
+- b-value: {maxc_result['b_value']} +/- {maxc_result['b_value_uncertainty']}
 
 GFT Method:
-- Mc: {cat_gft}
-- b-value: {cat_b} +/- {cat_shibolt_unc}
+- Mc: {gft_result['mc']}
+- b-value: {gft_result['b_value']} +/- {gft_result['b_value_uncertainty']}
 
 MBS Method:
-- Mc: {cat_mc}
-- b-value: {cat_b} +/- {cat_shibolt_unc}
+- Mc: {mbs_result['mc']}
+- b-value: {mbs_result['b_value']} +/- {mbs_result['b_value_uncertainty']}
 """
 
 summary_file_path = os.path.join(input_folder, "Mc_summary.txt")
 with open(summary_file_path, 'w') as summary_file:
     summary_file.write(summary_text)
 
-print(f"Summary of Mc analysis saved to Results/Mc_summary.txt")
+print(f"Summary of Mc analysis saved to {shown(summary_file_path)}")
+
+figure_names = {"fmd": "FMD_plot.png", "maxc": "MAXC.png", "gft_residuals": "GFT_plot.png",
+                "gft": "GFT.png", "mbs_stability": "MBS_plot.png", "mbs": "MBS.png"}
+proj.update("Mc_analysis.py", {"magnitude_of_completeness": {
+    "maxc": maxc_result,
+    "gft": gft_result,
+    "mbs": mbs_result,
+    "summary_file": proj.rel(summary_file_path),
+    "figures": {key: proj.rel(os.path.join(directory, name)) for key, name in figure_names.items()},
+}}, catalogue=proj.rel(input_file_path))

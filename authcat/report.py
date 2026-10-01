@@ -31,8 +31,9 @@ except ImportError as exc:
         "report.py requires ReportLab. Install it with: pip install reportlab"
     ) from exc
 
+from authcat.project import UTILITIES_DIR, open_project, shown
 
-DEFAULT_JSON = Path("Results") / "Arkal.json"
+
 DEFAULT_REPORT_DIR = Path("Reports")
 
 PAGE_WIDTH, PAGE_HEIGHT = A4
@@ -129,6 +130,27 @@ def unit_text(value: Any, suffix: str) -> str:
     if value is None:
         return "-"
     return f"{fmt(value)}{suffix}"
+
+
+def download_rows(bulletin: Any) -> list[list[Any]]:
+    """Rows for the period and area requested from bulletin.py.
+
+    None for a bulletin imported with project.py, which records neither.
+    """
+    if not is_available(bulletin) or not bulletin.get("start_date"):
+        return []
+    bounds = bulletin.get("bounds")
+    if isinstance(bounds, dict):
+        area = (
+            f"Lat: {range_text(bounds.get('latitude_min'), bounds.get('latitude_max'), ' deg')}; "
+            f"Lon: {range_text(bounds.get('longitude_min'), bounds.get('longitude_max'), ' deg')}"
+        )
+    else:
+        area = "No geographic limits"
+    return [
+        ["Download period", range_text(bulletin.get("start_date"), bulletin.get("end_date"))],
+        ["Download area", area],
+    ]
 
 
 def resolve_project_path(project_root: Path, path_value: Any) -> Path | None:
@@ -383,6 +405,7 @@ def add_dataset_overview(
     overview_rows = [
         ["Project", fmt(project.get("name"))],
         ["Catalogue", fmt(project.get("catalogue_file"))],
+        *download_rows(data.get("bulletin")),
         ["Number of events", fmt(cat.get("total_events"))],
         ["Time period", time_period],
         ["Study area", coordinates],
@@ -569,9 +592,22 @@ def add_magnitude_analysis(
         stations = []
     stations_text = ", ".join(str(s) for s in stations) if stations else "-"
 
+    threshold = mag.get("residual_threshold")
+    flagged = mag.get("flagged_stations", [])
+    if not isinstance(flagged, list):
+        flagged = []
+    if threshold is None:
+        flagged_text = "-"
+    else:
+        flagged_text = ", ".join(str(s) for s in flagged) if flagged else "None"
+
     story.append(
         make_table(
-            [["Stations excluded from magnitude recomputation", stations_text]],
+            [
+                ["Residual threshold (abs median residual)", fmt(threshold)],
+                ["Stations above the threshold", flagged_text],
+                ["Stations excluded from magnitude recomputation", stations_text],
+            ],
             [7.2 * cm, CONTENT_WIDTH - 7.2 * cm],
         )
     )
@@ -584,6 +620,30 @@ def add_magnitude_analysis(
         "Magnitude residual analysis by seismic station.",
         styles,
     )
+
+    bland_altman = mag.get("bland_altman", {})
+    if isinstance(bland_altman, dict) and bland_altman.get("figure"):
+        story.append(Paragraph("Original versus recomputed magnitudes", styles["subsection"]))
+        story.append(
+            make_table(
+                [
+                    ["Events compared", fmt(bland_altman.get("events"))],
+                    ["Mean difference (recomputed - original)", fmt(bland_altman.get("mean_difference"))],
+                    [
+                        "95% limits of agreement",
+                        f"{fmt(bland_altman.get('lower_limit'))} to {fmt(bland_altman.get('upper_limit'))}",
+                    ],
+                ],
+                [7.2 * cm, CONTENT_WIDTH - 7.2 * cm],
+            )
+        )
+        add_image(
+            story,
+            project_root,
+            bland_altman.get("figure"),
+            "Bland-Altman plot of original and recomputed event magnitudes.",
+            styles,
+        )
 
 
 def add_station_phases(
@@ -633,6 +693,51 @@ def add_station_phases(
     )
 
 
+def add_phase_files(
+    story: list[Any], data: dict[str, Any], styles: dict[str, ParagraphStyle]
+) -> None:
+    phases = data.get("phases", {})
+    if not is_available(phases):
+        return
+
+    add_section_heading(story, "Phase files", styles)
+
+    rows = [["Format", "File", "Events", "Phases"]]
+    for label, key in [("HypoDD", "hypodd"), ("HYPO71", "hypo71")]:
+        values = phases.get(key, {})
+        if isinstance(values, dict) and values.get("file"):
+            rows.append(
+                [
+                    label,
+                    fmt(values.get("file")),
+                    fmt(values.get("events")),
+                    fmt(values.get("phases")),
+                ]
+            )
+    if len(rows) > 1:
+        story.append(
+            make_header_table(rows, [3.4 * cm, 8.0 * cm, 3.0 * cm, 3.0 * cm])
+        )
+        story.append(Spacer(1, 8))
+
+    selection = phases.get("selection", {})
+    if isinstance(selection, dict) and selection.get("file"):
+        stations = selection.get("stations", [])
+        if not isinstance(stations, list):
+            stations = []
+        story.append(Paragraph("Station selection", styles["subsection"]))
+        story.append(
+            make_table(
+                [
+                    ["Stations kept", ", ".join(str(s) for s in stations) if stations else "-"],
+                    ["File", fmt(selection.get("file"))],
+                    ["Events", fmt(selection.get("events"))],
+                ],
+                [5.0 * cm, CONTENT_WIDTH - 5.0 * cm],
+            )
+        )
+
+
 def add_wadati(
     story: list[Any],
     data: dict[str, Any],
@@ -665,6 +770,23 @@ def add_wadati(
     )
 
 
+#: How omori_utsu.py chose each end of the sequence.
+OMORI_BOUND_LABELS = {
+    "catalogue_start": "start of catalogue",
+    "largest_event": "largest earthquake",
+    "specific_datetime": "chosen time",
+    "catalogue_end": "end of catalogue",
+}
+
+
+def sequence_bound(time_value: Any, mode: Any) -> str:
+    """A sequence start or end, e.g. '2021-03-03 10:16:08.367 (largest earthquake)'."""
+    text = fmt_datetime(time_value)
+    if mode in OMORI_BOUND_LABELS:
+        return f"{text} ({OMORI_BOUND_LABELS[mode]})" if text != "-" else OMORI_BOUND_LABELS[mode]
+    return text if text != "-" else fmt(mode)
+
+
 def add_omori(
     story: list[Any],
     data: dict[str, Any],
@@ -677,13 +799,24 @@ def add_omori(
 
     add_section_heading(story, "Modified Omori Law", styles)
 
+    threshold = omori.get("magnitude_threshold")
     rows = [
-        ["Fit start", fmt(omori.get("fit_start"))],
-        ["K", fmt(omori.get("K"))],
-        ["c", fmt(omori.get("c"))],
-        ["p", fmt(omori.get("p"))],
+        ["Sequence start", sequence_bound(omori.get("start_time"), omori.get("fit_start"))],
+        ["Sequence end", sequence_bound(omori.get("end_time"), omori.get("fit_end"))],
+        ["Magnitude threshold (Mc)", f"M >= {fmt(threshold)}" if threshold is not None else "All events"],
+        ["Events used", fmt(omori.get("events"))],
     ]
     story.append(make_table(rows, [5.0 * cm, CONTENT_WIDTH - 5.0 * cm]))
+    story.append(Spacer(1, 8))
+
+    params = [["Parameter", "Bayesian fit", "MCMC median", "16th-84th percentile"]]
+    for name in ("K", "c", "p"):
+        median = safe_get(omori, "mcmc", name, "median")
+        p16 = safe_get(omori, "mcmc", name, "p16")
+        p84 = safe_get(omori, "mcmc", name, "p84")
+        spread = f"{fmt(p16)} to {fmt(p84)}" if p16 is not None and p84 is not None else "-"
+        params.append([name, fmt(omori.get(name)), fmt(median), spread])
+    story.append(make_header_table(params, [3.4 * cm, 4.3 * cm, 4.3 * cm, 5.4 * cm]))
     story.append(Spacer(1, 7))
 
     add_image(
@@ -691,6 +824,14 @@ def add_omori(
         project_root,
         omori.get("figure"),
         "Modified Omori Law fit.",
+        styles,
+    )
+    add_image(
+        story,
+        project_root,
+        omori.get("mcmc_figure"),
+        "MCMC posterior distributions of the Modified Omori parameters "
+        "(16th, 50th and 84th percentiles marked).",
         styles,
     )
 
@@ -704,6 +845,7 @@ def add_summary(
         ("Magnitude of completeness", "magnitude_of_completeness"),
         ("Magnitude analysis", "magnitude_regularization"),
         ("Seismic network and phases", "station_phases"),
+        ("Phase files", "phases"),
         ("Vp/Vs estimation", "wadati"),
         ("Modified Omori Law", "modified_omori"),
     ]
@@ -776,10 +918,10 @@ def build_pdf(data: dict[str, Any], project_root: Path, output_path: Path) -> No
     story: list[Any] = []
 
     # Dedicated cover page.
-    # LOGO.png is expected in the same directory as report.py.
+    # LOGO.png is expected in the Utilities folder next to report.py.
     story.append(Spacer(1, 2.0 * cm))
 
-    logo_path = Path(__file__).resolve().with_name("LOGO.png")
+    logo_path = UTILITIES_DIR / "LOGO.png"
     if logo_path.exists() and logo_path.is_file():
         try:
             logo = scaled_image_to_fit(logo_path, 9.0 * cm, 6.5 * cm)
@@ -810,6 +952,7 @@ def build_pdf(data: dict[str, Any], project_root: Path, output_path: Path) -> No
     add_mc(story, data, project_root, styles)
     add_magnitude_analysis(story, data, project_root, styles)
     add_station_phases(story, data, project_root, styles)
+    add_phase_files(story, data, styles)
     add_wadati(story, data, project_root, styles)
     add_omori(story, data, project_root, styles)
     add_summary(story, data, styles)
@@ -828,13 +971,19 @@ def build_pdf(data: dict[str, Any], project_root: Path, output_path: Path) -> No
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate an AUTH-CAT PDF report from analysis_summary.json."
+        description="Generate an AUTH-CAT PDF report from a project record."
     )
     parser.add_argument(
         "json_file",
         nargs="?",
-        default=str(DEFAULT_JSON),
-        help=f"Path to analysis summary JSON (default: {DEFAULT_JSON})",
+        default=None,
+        help="Path to the project record, Projects/<name>/<name>.json "
+        "(default: the record of the project given with -p, or asks)",
+    )
+    parser.add_argument(
+        "-p",
+        "--project",
+        help="Project to report on (default: asks, Enter = last used)",
     )
     parser.add_argument(
         "--output-dir",
@@ -847,14 +996,19 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    json_path = Path(args.json_file).resolve()
+    if args.json_file:
+        json_path = Path(args.json_file).resolve()
+    else:
+        json_path = open_project(args.project).json_path.resolve()
     data = load_json(json_path)
 
-    # In the standard AUTH-CAT layout the JSON is inside Results/.
+    # The project record sits at the top of its project folder,
+    # Projects/<name>/<name>.json, and the paths inside it are relative to
+    # that folder. Older records were kept inside Results/.
     if json_path.parent.name.lower() == "results":
         project_root = json_path.parent.parent
     else:
-        project_root = Path.cwd().resolve()
+        project_root = json_path.parent
 
     project_name = safe_get(data, "project", "name", default="AUTH-CAT") or "AUTH-CAT"
     safe_name = "".join(
@@ -869,7 +1023,7 @@ def main() -> None:
     output_path = output_dir / f"{safe_name}_report.pdf"
     build_pdf(data, project_root, output_path)
 
-    print(f"AUTH-CAT PDF report written to: {output_path}")
+    print(f"AUTH-CAT PDF report written to: {shown(output_path)}")
 
 
 if __name__ == "__main__":

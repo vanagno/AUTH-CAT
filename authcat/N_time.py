@@ -4,6 +4,8 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from authcat.project import ask_file_name, open_project, shown, watermark
+
 COLUMNS = ['Year', 'Stamp', 'Latitude', 'Longitude', 'Depth', 'Magnitude']
 
 
@@ -35,7 +37,7 @@ def read_sixcol(file_path):
     return df.reset_index(drop=True)
 
 
-def calculate_cumulative_earthquakes(file_path, mc=None):
+def calculate_cumulative_earthquakes(file_path, mc=None, figures_dir='Figures'):
     """Plot the cumulative count, whole catalogue and above Mc.
 
     Returns the full catalogue and the part of it at or above Mc, both with
@@ -64,12 +66,13 @@ def calculate_cumulative_earthquakes(file_path, mc=None):
     ax2.set_xlabel('Days Since Start of Catalog')
     ax2.set_ylabel(f'Cumulative Count Above Mc ({mc})')
     
-    directory = 'Figures'
+    directory = figures_dir
     output_file = os.path.join(directory, 'cumulative_earthquakes.png')
     os.makedirs(directory, exist_ok=True)
+    watermark(fig)
     fig.savefig(output_file)
     plt.show()
-    print(f"Cumulative earthquakes plot saved to {output_file}")
+    print(f"Cumulative earthquakes plot saved to {shown(output_file)}")
 
     return df, filtered_df
 
@@ -84,23 +87,33 @@ def prompt_for_mc():
             print(f"'{answer}' is not a number; please try again")
 
 
-def prompt_for_input(folder):
+def prompt_for_input(folder, default=None):
     """List the folder and ask for a file in it, re-asking until one exists."""
     if os.path.isdir(folder):
-        print(f"\n{folder} folder:")
+        print(f"\n{shown(folder)} folder:")
         for filename in sorted(os.listdir(folder)):
             print(f"    {filename}")
     else:
-        print(f"The folder {folder} does not exist.")
+        print(f"The folder {shown(folder)} does not exist.")
 
     while True:
-        name = input("Please provide the name of the 6-column catalogue: ").strip()
+        name = ask_file_name("Please provide the name of the 6-column catalogue", default)
         path = os.path.join(folder, name)
         if os.path.isfile(path):
             return path
-        print(f"{path} is not a file; please try again")
+        print(f"{shown(path)} is not a file; please try again")
 
 
 if __name__ == "__main__":
+    proj = open_project()
+    path = prompt_for_input(
+        proj.results_dir,
+        proj.recorded_name(proj.results_dir, "project", "catalogue_6col_file"))
+    mc = prompt_for_mc()
     result, filtered_result = calculate_cumulative_earthquakes(
-        prompt_for_input("Results"))
+        path, mc, figures_dir=proj.figures_dir)
+    proj.update("N_time.py",
+                {"figures": {"cumulative_events": proj.rel(
+                    os.path.join(proj.figures_dir, 'cumulative_earthquakes.png'))}},
+                catalogue=proj.rel(path), mc=mc, events=len(result),
+                events_above_mc=len(filtered_result))
