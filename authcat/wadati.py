@@ -64,6 +64,7 @@ def compute_travel_times(earthquakes):
     p_travel_times = []
     sp_diff_times = []
     header = 'ID    P-travel S-travel S-P Diff'
+    early = 0
     for eq in earthquakes:
         origin_time = eq['origin_time']
         for station, times in eq['phase_arrivals'].items():
@@ -71,9 +72,15 @@ def compute_travel_times(earthquakes):
                 p_travel_time = seconds_after(origin_time, times['P'])
                 s_travel_time = seconds_after(origin_time, times['S'])
                 diff_time = s_travel_time - p_travel_time
-                if diff_time >= 0: 
+                if p_travel_time < 0:
+                    # a P before the origin: a wrong pick or origin time
+                    early += 1
+                elif diff_time >= 0:
                     p_travel_times.append(p_travel_time)
                     sp_diff_times.append(diff_time)
+    if early:
+        print(f"Left out {early} P-S pair{'s' if early != 1 else ''} whose P arrives "
+              "before the origin time")
     return p_travel_times, sp_diff_times, header
 
 def linear_function(p, x):
