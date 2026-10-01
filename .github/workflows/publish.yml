@@ -1,6 +1,5 @@
 # Builds the authcat package and uploads it to PyPI when a release is
-# published on GitHub. Uses PyPI trusted publishing: no password or token is
-# stored here; PyPI trusts this workflow once it is registered there.
+# published on GitHub.
 name: Publish to PyPI
 
 on:
