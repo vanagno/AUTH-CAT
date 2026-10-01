@@ -9,18 +9,22 @@ from, where ``authcat sta`` uses it in place of the installed copy.
 Coordinates come from the FDSN station services, the standard way seismic
 networks publish their metadata:
 
-* the EIDA federator (eida-federator.ethz.ch), which answers for every
-  European data centre;
-* NOA's EIDA node (eida.gein.noa.gr), which holds the Greek networks
-  (HL, HT, HP, HA, HC, HI) itself, so they are found even when the federator
-  cannot be reached;
+* every EIDA data centre -- NOA for the Greek networks (HL, HT, HP, HA, HC,
+  HI), KOERI for the Turkish, RESIF, GFZ, INGV and the rest -- found through
+  the EIDA routing service (ORFEUS, or GFZ as a backup);
 * IRIS (service.iris.edu), for anything EIDA does not hold.
+
+When no routing service answers, the EIDA federator (eida-federator.ethz.ch)
+and NOA are asked instead.
 
 Each service is asked once for every station in the region the list covers;
 the station codes are matched here. A code found in more than one network is
 settled by the network the bulletins name it with, then by the position
 already listed; a code that still cannot be settled keeps its old line and is
-reported.
+reported. A position more than FAR_KM from the listed one is more likely
+another station with the same code than a move, so it is reported and the
+listed line kept, unless the bulletins confirm the station's network or
+--accept-far is given.
 
 Usage
 -----
@@ -49,10 +53,18 @@ from pathlib import Path
 
 from authcat.project import PROJECTS_DIR, UTILITIES_DIR, list_projects, shown
 
-SERVICES = [
-    ("EIDA", "https://eida-federator.ethz.ch/fdsnws/station/1/query"),
+#: EIDA routing services: they say which data centre holds which network, so
+#: each data centre can be asked directly.
+ROUTING = [
+    "https://www.orfeus-eu.org/eidaws/routing/1/query",
+    "https://geofon.gfz-potsdam.de/eidaws/routing/1/query",
+]
+IRIS = ("IRIS", "https://service.iris.edu/fdsnws/station/1/query")
+#: Asked when no routing service answers.
+FALLBACK_SERVICES = [
+    ("EIDA federator", "https://eida-federator.ethz.ch/fdsnws/station/1/query"),
     ("NOA", "https://eida.gein.noa.gr/fdsnws/station/1/query"),
-    ("IRIS", "https://service.iris.edu/fdsnws/station/1/query"),
+    IRIS,
 ]
 USER_AGENT = "authcat-stup (+https://github.com/vanagno/AUTH-CAT)"
 STATION_FILE = "regd.sta"
@@ -64,6 +76,9 @@ MARGIN = 1.0
 DEFAULT_REGION = (33.5, 43.5, 18.0, 31.0)
 #: Positions further apart than this (km) are treated as different places.
 MOVED_KM = 1.0
+#: A service position further than this (km) from the listed one is kept out
+#: unless confirmed (see the module docstring).
+FAR_KM = 10.0
 
 
 @dataclass
@@ -199,6 +214,32 @@ def _open(request: urllib.request.Request, timeout: float):
         return urllib.request.urlopen(request, timeout=timeout, context=context)
 
 
+def eida_nodes(routing: list[str], timeout: float) -> list[tuple[str, str]]:
+    """The station service of every EIDA data centre, as ``(label, url)``,
+    from the first routing service that answers; [] when none does.
+
+    The routing service's ``format=post`` answer lists each data centre's
+    service URL on a line of its own, followed by the networks it holds.
+    """
+    for url in routing:
+        request = urllib.request.Request(
+            f"{url}?service=station&format=post", headers={"User-Agent": USER_AGENT}
+        )
+        try:
+            with _open(request, timeout) as resp:
+                text = resp.read().decode("utf-8", errors="replace")
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError):
+            continue
+        nodes = sorted({
+            line.strip().split("?")[0]
+            for line in text.splitlines()
+            if line.strip().startswith(("http://", "https://"))
+        })
+        if nodes:
+            return [(f"EIDA {urllib.parse.urlparse(n).hostname}", n) for n in nodes]
+    return []
+
+
 def fetch_epochs(url: str, box: tuple[float, float, float, float], source: str,
                  timeout: float) -> list[Epoch]:
     """Every station epoch the service holds inside ``box``.
@@ -296,7 +337,8 @@ def _date(text: str) -> dt.datetime:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description="Update the station list regd.sta from the FDSN station services "
-        "(EIDA, NOA, IRIS). Writes regd.sta into this folder, where 'authcat sta' uses it."
+        "(the EIDA data centres and IRIS). Writes regd.sta into this folder, where "
+        "'authcat sta' uses it."
     )
     ap.add_argument("--date", type=_date, metavar="YYYY-MM-DD",
                     help="use the positions valid on this date instead of the current ones")
@@ -309,8 +351,15 @@ def main(argv: list[str] | None = None) -> int:
                     metavar=("MINLAT", "MAXLAT", "MINLON", "MAXLON"),
                     help="region to ask for (default: the listed stations plus a "
                          f"{MARGIN:g} degree margin)")
+    ap.add_argument("--accept-far", action="store_true",
+                    help=f"take service positions more than {FAR_KM:g} km from the listed "
+                         "ones even when the bulletins do not confirm the network")
     ap.add_argument("--service", action="append", metavar="URL",
-                    help="FDSN station service to ask instead of EIDA, NOA and IRIS (repeatable)")
+                    help="FDSN station service to ask instead of the EIDA data centres "
+                         "and IRIS (repeatable)")
+    ap.add_argument("--routing", action="append", metavar="URL",
+                    help="EIDA routing service to find the data centres with "
+                         "(repeatable; default: ORFEUS, then GFZ)")
     ap.add_argument("--timeout", type=float, default=180.0,
                     help="seconds to wait for each service")
     ap.add_argument("--dry-run", action="store_true",
@@ -334,7 +383,17 @@ def main(argv: list[str] | None = None) -> int:
 
     wanted = sorted(set(old) | set(named))
     box = tuple(args.region) if args.region else region(old.values())
-    services = [(url, url) for url in args.service] if args.service else SERVICES
+    if args.service:
+        services = [(url, url) for url in args.service]
+    else:
+        print("Asking the EIDA routing service for the data centres ... ", end="", flush=True)
+        nodes = eida_nodes(args.routing or ROUTING, args.timeout)
+        if nodes:
+            print(f"{len(nodes)} found")
+            services = nodes + [IRIS]
+        else:
+            print("no answer; asking the federator, NOA and IRIS instead")
+            services = FALLBACK_SERVICES
 
     # code -> network -> epochs; a (network, station, start) already given by
     # an earlier service is not taken again from a later one.
@@ -374,6 +433,7 @@ def main(argv: list[str] | None = None) -> int:
 
     final: dict[str, tuple[float, float]] = {}
     unchanged, moved, shifted, added, kept, lost, notes = [], [], [], [], [], [], []
+    far, small = [], 0
     for code in wanted:
         before = old.get(code)
         epoch, note = (None, "not found")
@@ -390,25 +450,38 @@ def main(argv: list[str] | None = None) -> int:
                 lost.append(f"{'/'.join(sorted(named.get(code, ''))) or '?'}.{code}{reason}")
             continue
         after = (round(epoch.lat, 4), round(epoch.lon, 4))
-        final[code] = after
         if before is None:
+            final[code] = after
             added.append(f"{epoch.network}.{code}")
         elif after == (round(before[0], 4), round(before[1], 4)):
+            final[code] = after
             unchanged.append(code)
         else:
             distance = km(before, after)
+            confirmed = epoch.network in named.get(code, set())
+            if distance > FAR_KM and not (confirmed or args.accept_far):
+                final[code] = before
+                far.append(f"{epoch.network}.{code} {distance:.1f} km")
+                continue
+            final[code] = after
             if distance > MOVED_KM:
-                moved.append(f"{code} {distance:.1f} km")
+                moved.append(f"{epoch.network}.{code} {distance:.1f} km")
             else:
                 shifted.append(code)
+                small += distance < 0.1
 
     print(f"\n{len(final)} stations: {len(unchanged)} unchanged, "
           f"{len(shifted) + len(moved)} updated, {len(added)} added, "
-          f"{len(kept)} kept as listed")
+          f"{len(kept) + len(far)} kept as listed")
     if moved:
         print(f"  moved more than {MOVED_KM:g} km: " + ", ".join(moved))
     if shifted:
-        print(f"  adjusted by up to {MOVED_KM:g} km: {len(shifted)}")
+        print(f"  adjusted by up to {MOVED_KM:g} km: {len(shifted)} "
+              f"({small} of them by less than 100 m)")
+    if far:
+        print(f"  more than {FAR_KM:g} km from the listed position, so probably another "
+              "station with the same code -- kept as listed; check them, and use "
+              "--accept-far to take them: " + ", ".join(far))
     if added:
         print("  added: " + ", ".join(added))
     if kept:
