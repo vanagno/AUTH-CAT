@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from datetime import datetime
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any, Iterable
 from xml.sax.saxutils import escape
@@ -80,8 +82,12 @@ def fmt(value: Any, decimals: int | None = None) -> str:
     if value is None:
         return "-"
 
-    if isinstance(value, float) and decimals is not None:
-        return f"{value:.{decimals}f}"
+    if (decimals is not None and isinstance(value, (int, float))
+            and not isinstance(value, bool) and math.isfinite(value)):
+        # Rounded to the nearest, halves up, as by hand: 2.675 -> 2.68
+        # (the float itself, 2.67499..., would give 2.67).
+        step = Decimal(1).scaleb(-decimals)
+        return str(Decimal(str(value)).quantize(step, rounding=ROUND_HALF_UP))
 
     return str(value)
 
@@ -142,8 +148,8 @@ def download_rows(bulletin: Any) -> list[list[Any]]:
     bounds = bulletin.get("bounds")
     if isinstance(bounds, dict):
         area = (
-            f"Lat: {range_text(bounds.get('latitude_min'), bounds.get('latitude_max'), ' deg')}; "
-            f"Lon: {range_text(bounds.get('longitude_min'), bounds.get('longitude_max'), ' deg')}"
+            f"Lat: {range_text(bounds.get('latitude_min'), bounds.get('latitude_max'), ' deg', 2)}; "
+            f"Lon: {range_text(bounds.get('longitude_min'), bounds.get('longitude_max'), ' deg', 2)}"
         )
     else:
         area = "No geographic limits"
@@ -392,10 +398,10 @@ def add_dataset_overview(
         time_period = f"{start_time} - {end_time}"
 
     latitude_range = range_text(
-        cat.get("latitude_min"), cat.get("latitude_max"), " deg"
+        cat.get("latitude_min"), cat.get("latitude_max"), " deg", 2
     )
     longitude_range = range_text(
-        cat.get("longitude_min"), cat.get("longitude_max"), " deg"
+        cat.get("longitude_min"), cat.get("longitude_max"), " deg", 2
     )
     if latitude_range == "-" and longitude_range == "-":
         coordinates = "-"
@@ -409,7 +415,7 @@ def add_dataset_overview(
         ["Number of events", fmt(cat.get("total_events"))],
         ["Time period", time_period],
         ["Study area", coordinates],
-        ["Depth range", range_text(cat.get("depth_min_km"), cat.get("depth_max_km"), " km")],
+        ["Depth range", range_text(cat.get("depth_min_km"), cat.get("depth_max_km"), " km", 2)],
         ["Magnitude range", magnitude_range_text(cat.get("magnitude_min"), cat.get("magnitude_max"))],
     ]
     story.append(make_table(overview_rows, [5.2 * cm, CONTENT_WIDTH - 5.2 * cm]))
@@ -811,11 +817,13 @@ def add_omori(
 
     params = [["Parameter", "Bayesian fit", "MCMC median", "16th-84th percentile"]]
     for name in ("K", "c", "p"):
+        decimals = 2 if name in ("c", "p") else None
         median = safe_get(omori, "mcmc", name, "median")
         p16 = safe_get(omori, "mcmc", name, "p16")
         p84 = safe_get(omori, "mcmc", name, "p84")
-        spread = f"{fmt(p16)} to {fmt(p84)}" if p16 is not None and p84 is not None else "-"
-        params.append([name, fmt(omori.get(name)), fmt(median), spread])
+        spread = (f"{fmt(p16, decimals)} to {fmt(p84, decimals)}"
+                  if p16 is not None and p84 is not None else "-")
+        params.append([name, fmt(omori.get(name), decimals), fmt(median, decimals), spread])
     story.append(make_header_table(params, [3.4 * cm, 4.3 * cm, 4.3 * cm, 5.4 * cm]))
     story.append(Spacer(1, 7))
 

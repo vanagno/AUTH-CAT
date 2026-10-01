@@ -60,11 +60,11 @@ def plot_earthquakes_final_rounded_ticks(latitudes, longitudes, magnitudes, outp
                transform=ccrs.PlateCarree())
     
     legend_patches = [
-        Patch(facecolor='black', edgecolor='black', label='<= 2.0'),
+        Patch(facecolor='black', edgecolor='black', label='≤ 2.0'),
         Patch(facecolor='lightyellow', edgecolor='black', label='2.0 - 3.0'),
         Patch(facecolor='orange', edgecolor='black', label='3.0 - 4.0'),
         Patch(facecolor='darkorange', edgecolor='black', label='4.0 - 5.0'),
-        Patch(facecolor='red', edgecolor='black', label='>= 5.0')
+        Patch(facecolor='red', edgecolor='black', label='> 5.0')
     ]
     
     lon_start = np.floor(min(longitudes) * 100) / 100
