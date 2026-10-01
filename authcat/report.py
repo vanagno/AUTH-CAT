@@ -115,9 +115,9 @@ def range_text(
     if minimum is None and maximum is None:
         return "-"
     if minimum is None:
-        return f"<= {fmt(maximum, decimals)}{suffix}"
+        return f"≤ {fmt(maximum, decimals)}{suffix}"
     if maximum is None:
-        return f">= {fmt(minimum, decimals)}{suffix}"
+        return f"≥ {fmt(minimum, decimals)}{suffix}"
     return f"{fmt(minimum, decimals)} - {fmt(maximum, decimals)}{suffix}"
 
 
@@ -126,9 +126,9 @@ def magnitude_range_text(minimum: Any, maximum: Any) -> str:
     if minimum is None and maximum is None:
         return "-"
     if minimum is None:
-        return f"<= {fmt(maximum, 1)}"
+        return f"≤ {fmt(maximum, 1)}"
     if maximum is None:
-        return f">= {fmt(minimum, 1)}"
+        return f"≥ {fmt(minimum, 1)}"
     return f"{fmt(minimum, 1)}-{fmt(maximum, 1)}"
 
 
@@ -809,7 +809,7 @@ def add_omori(
     rows = [
         ["Sequence start", sequence_bound(omori.get("start_time"), omori.get("fit_start"))],
         ["Sequence end", sequence_bound(omori.get("end_time"), omori.get("fit_end"))],
-        ["Magnitude threshold (Mc)", f"M >= {fmt(threshold)}" if threshold is not None else "All events"],
+        ["Magnitude threshold (Mc)", f"M ≥ {fmt(threshold)}" if threshold is not None else "All events"],
         ["Events used", fmt(omori.get("events"))],
     ]
     story.append(make_table(rows, [5.0 * cm, CONTENT_WIDTH - 5.0 * cm]))
