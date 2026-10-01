@@ -10,8 +10,10 @@ Coordinates come from the FDSN station services, the standard way seismic
 networks publish their metadata:
 
 * the EIDA federator (eida-federator.ethz.ch), which answers for every
-  European data centre, including NOA's node for the Greek networks
-  (HL, HT, HP, HA, HC, HI);
+  European data centre;
+* NOA's EIDA node (eida.gein.noa.gr), which holds the Greek networks
+  (HL, HT, HP, HA, HC, HI) itself, so they are found even when the federator
+  cannot be reached;
 * IRIS (service.iris.edu), for anything EIDA does not hold.
 
 Each service is asked once for every station in the region the list covers;
@@ -37,6 +39,7 @@ import datetime as dt
 import math
 import os
 import shutil
+import ssl
 import sys
 import urllib.error
 import urllib.parse
@@ -48,6 +51,7 @@ from authcat.project import PROJECTS_DIR, UTILITIES_DIR, list_projects, shown
 
 SERVICES = [
     ("EIDA", "https://eida-federator.ethz.ch/fdsnws/station/1/query"),
+    ("NOA", "https://eida.gein.noa.gr/fdsnws/station/1/query"),
     ("IRIS", "https://service.iris.edu/fdsnws/station/1/query"),
 ]
 USER_AGENT = "authcat-stup (+https://github.com/vanagno/AUTH-CAT)"
@@ -174,6 +178,27 @@ def parse_fdsn_text(text: str, source: str) -> list[Epoch]:
     return epochs
 
 
+def _open(request: urllib.request.Request, timeout: float):
+    """urlopen, retrying with certifi's certificate authorities when the
+    system's own cannot verify the server.
+
+    Python installed from python.org on macOS, and some Windows setups, have
+    no usable list of certificate authorities until one is installed; certifi
+    (installed with cartopy) carries an up-to-date one.
+    """
+    try:
+        return urllib.request.urlopen(request, timeout=timeout)
+    except urllib.error.URLError as exc:
+        if not isinstance(exc.reason, ssl.SSLCertVerificationError):
+            raise
+        try:
+            import certifi
+        except ImportError:
+            raise exc from None
+        context = ssl.create_default_context(cafile=certifi.where())
+        return urllib.request.urlopen(request, timeout=timeout, context=context)
+
+
 def fetch_epochs(url: str, box: tuple[float, float, float, float], source: str,
                  timeout: float) -> list[Epoch]:
     """Every station epoch the service holds inside ``box``.
@@ -191,7 +216,7 @@ def fetch_epochs(url: str, box: tuple[float, float, float, float], source: str,
     })
     request = urllib.request.Request(f"{url}?{query}", headers={"User-Agent": USER_AGENT})
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as resp:
+        with _open(request, timeout) as resp:
             if resp.status == 204:  # FDSN: no data
                 return []
             text = resp.read().decode("utf-8", errors="replace")
@@ -200,7 +225,10 @@ def fetch_epochs(url: str, box: tuple[float, float, float, float], source: str,
             return []
         raise RuntimeError(f"HTTP {exc.code}") from None
     except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
-        raise RuntimeError(str(getattr(exc, "reason", exc))) from None
+        reason = getattr(exc, "reason", exc)
+        if isinstance(reason, ssl.SSLCertVerificationError):
+            raise RuntimeError("its security certificate could not be verified") from None
+        raise RuntimeError(str(reason)) from None
     return parse_fdsn_text(text, source)
 
 
@@ -268,7 +296,7 @@ def _date(text: str) -> dt.datetime:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description="Update the station list regd.sta from the FDSN station services "
-        "(EIDA, IRIS). Writes regd.sta into this folder, where 'authcat sta' uses it."
+        "(EIDA, NOA, IRIS). Writes regd.sta into this folder, where 'authcat sta' uses it."
     )
     ap.add_argument("--date", type=_date, metavar="YYYY-MM-DD",
                     help="use the positions valid on this date instead of the current ones")
@@ -282,7 +310,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="region to ask for (default: the listed stations plus a "
                          f"{MARGIN:g} degree margin)")
     ap.add_argument("--service", action="append", metavar="URL",
-                    help="FDSN station service to ask instead of EIDA and IRIS (repeatable)")
+                    help="FDSN station service to ask instead of EIDA, NOA and IRIS (repeatable)")
     ap.add_argument("--timeout", type=float, default=180.0,
                     help="seconds to wait for each service")
     ap.add_argument("--dry-run", action="store_true",
@@ -313,6 +341,7 @@ def main(argv: list[str] | None = None) -> int:
     candidates: dict[str, dict[str, list[Epoch]]] = {}
     seen = set()
     reached = 0
+    certificate_failures = 0
     for name, url in services:
         print(f"Asking {name} for the stations in lat {box[0]:.1f} to {box[1]:.1f}, "
               f"lon {box[2]:.1f} to {box[3]:.1f} ... ", end="", flush=True)
@@ -320,6 +349,7 @@ def main(argv: list[str] | None = None) -> int:
             epochs = fetch_epochs(url, box, name, args.timeout)
         except RuntimeError as exc:
             print(f"failed ({exc})")
+            certificate_failures += "certificate" in str(exc)
             continue
         reached += 1
         print(f"{len(epochs)} station epochs")
@@ -329,6 +359,14 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             seen.add(key)
             candidates.setdefault(e.station, {}).setdefault(e.network, []).append(e)
+    if certificate_failures == len(services):
+        print("  No service's certificate could be verified, so this Python has no usable "
+              "list of certificate authorities.\n  With Python from python.org on macOS, run "
+              "'Install Certificates.command' in the Python folder; elsewhere, "
+              "'pip install --upgrade certifi'.")
+    elif certificate_failures:
+        print("  A service whose certificate cannot be verified usually sends an incomplete "
+              "certificate chain; the stations come from the other services.")
     if not reached:
         print("error: no station service could be reached; nothing was written",
               file=sys.stderr)

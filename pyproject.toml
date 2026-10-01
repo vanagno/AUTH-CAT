@@ -31,6 +31,7 @@ dependencies = [
     "corner>=2.2",
     "reportlab>=3.6",
     "tqdm",
+    "certifi",
 ]
 
 [project.urls]
