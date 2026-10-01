@@ -632,7 +632,6 @@ def make_decay_plot(
     fig.tight_layout()
     watermark(fig)
     fig.savefig(output_path, dpi=150)
-    plt.close(fig)
 
     return bin_loc, occ_dens, fit_values
 
@@ -648,7 +647,6 @@ def make_corner_plot(flat_samples: np.ndarray, output_path: Path) -> None:
     fig.tight_layout()
     watermark(fig)
     fig.savefig(output_path, dpi=150)
-    plt.close(fig)
 
 
 def save_fit_data(
@@ -834,6 +832,9 @@ def main() -> None:
         },
         catalogue=proj.rel(catalogue_path),
     )
+
+    # Both figures, once everything is saved and recorded
+    plt.show()
 
 
 if __name__ == "__main__":
