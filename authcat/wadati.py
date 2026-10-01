@@ -3,7 +3,7 @@ import numpy as np
 from datetime import datetime
 from scipy.odr import Model, ODR, RealData
 import os
-from project import ask_file_name, open_project, shown, watermark
+from authcat.project import ask_file_name, open_project, shown, watermark
 
 def parse_earthquake_data(bulletin_text):
     lines = bulletin_text.strip().split('\n')

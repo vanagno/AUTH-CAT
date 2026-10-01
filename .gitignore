@@ -7,3 +7,8 @@ Projects/.current
 
 # Files left half-written by an interrupted download or save
 *.part
+
+# Package build output
+build/
+dist/
+*.egg-info/

@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from project import ask_file_name, open_project, shown, watermark
+from authcat.project import ask_file_name, open_project, shown, watermark
 
 COLUMNS = ['Year', 'Stamp', 'Latitude', 'Longitude', 'Depth', 'Magnitude']
 

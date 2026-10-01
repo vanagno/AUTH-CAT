@@ -17,9 +17,9 @@ and largest event are recorded in the project record (see ``project.py``).
 
 Usage
 -----
-    python catalog.py                                  # interactive, as before
-    python catalog.py -p Arkal -f all                  # the project's own bulletin
-    python catalog.py -p Arkal -i other.bul -f quakeml --no-picks
+    authcat cat                                        # interactive, as before
+    authcat cat -p Arkal -f all                        # the project's own bulletin
+    authcat cat -p Arkal -i other.bul -f quakeml --no-picks
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Sequence
 
-from project import Project, ask_file_name, open_project, shown
+from authcat.project import Project, ask_file_name, open_project, shown
 
 #: Kilometres per degree of latitude on a sphere of radius 6371 km. The
 #: bulletin gives horizontal uncertainties in km; QuakeML wants the

@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from project import ask_file_name, open_project, shown
+from authcat.project import ask_file_name, open_project, shown
 
 def update_catalog_with_modified_magnitudes(catalog_path, modified_magnitudes_path, output_path):
     """Write the catalogue with the recomputed magnitudes; return how many

@@ -13,7 +13,7 @@ variable names another folder to keep them in instead:
         Figures/      plots
         Magnitudes/   station magnitude lists and their plot
 
-``bulletin.py`` creates the project when it downloads the bulletin. Every later
+``bulletin.py`` (``authcat bul``) creates the project when it downloads the bulletin. Every later
 script asks which project to work on -- Enter picks the last one used -- reads
 its input from that project's folders, writes its output there, and records
 what it found in ``<name>.json``.
@@ -27,9 +27,9 @@ project folder.
 To start a project from a bulletin you already have rather than downloading
 one::
 
-    python project.py Arkal --bulletin Input/Arkal.bul
+    authcat project Arkal --bulletin Arkal.bul
 
-With no arguments it lists the projects. Standard library only.
+With no arguments (``authcat project``) it lists the projects. Standard library only.
 """
 
 from __future__ import annotations
@@ -414,7 +414,7 @@ def current_project(base: str | os.PathLike = PROJECTS_DIR) -> str | None:
 def _ask_project(base: Path) -> str:
     names = list_projects(base)
     if not names:
-        raise SystemExit(f"error: no projects in {base}/ yet -- run bulletin.py or project.py first")
+        raise SystemExit(f"error: no projects in {base}/ yet -- start one with 'authcat bul' or 'authcat project'")
     default = current_project(base) or (names[0] if len(names) == 1 else None)
     print("Projects:")
     for name in names:
@@ -448,7 +448,7 @@ def open_project(name: str | None = None, base: str | os.PathLike = PROJECTS_DIR
         name = _ask_project(base) if sys.stdin.isatty() else current_project(base)
         if name is None:
             raise SystemExit(
-                "error: no project given and none used before -- run bulletin.py or project.py first"
+                "error: no project given and none used before -- start one with 'authcat bul' or 'authcat project'"
             )
     try:
         proj = Project(name, base)
@@ -457,7 +457,7 @@ def open_project(name: str | None = None, base: str | os.PathLike = PROJECTS_DIR
     if not proj.json_path.is_file():
         raise SystemExit(
             f"error: there is no project {proj.name!r} in {base}/ -- "
-            f"run bulletin.py or project.py to create it"
+            f"start it with 'authcat bul' or 'authcat project'"
         )
     proj.create()  # restores any subfolder deleted by hand
     proj.make_current()
@@ -468,7 +468,7 @@ def open_project(name: str | None = None, base: str | os.PathLike = PROJECTS_DIR
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description="List the AUTH-CAT projects, or start one from a bulletin you "
-        "already have (bulletin.py starts one by downloading the bulletin)."
+        "already have ('authcat bul' starts one by downloading the bulletin)."
     )
     ap.add_argument("name", nargs="?", help="name of the project to create")
     ap.add_argument("-b", "--bulletin", help="bulletin file to copy into the new project")
@@ -486,7 +486,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.bulletin:
         ap.error("pass --bulletin FILE to start a project from a bulletin you have, "
-                 "or run bulletin.py to download one")
+                 "or run 'authcat bul' to download one")
     try:
         proj = Project(args.name)
     except ValueError as exc:

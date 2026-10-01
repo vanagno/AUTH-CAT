@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-from project import ask_file_name, open_project, shown, watermark
+from authcat.project import ask_file_name, open_project, shown, watermark
 
 proj = open_project()
 input_folder = proj.results_dir

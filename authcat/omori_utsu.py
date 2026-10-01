@@ -51,7 +51,7 @@ except ImportError as exc:
         "Missing dependency 'corner'. Install it with: pip install corner"
     ) from exc
 
-from project import ask_file_name, open_project, shown, watermark
+from authcat.project import ask_file_name, open_project, shown, watermark
 
 
 META = {

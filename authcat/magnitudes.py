@@ -4,7 +4,7 @@ import sys
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import numpy as np
-from project import ask_file_name, open_project, shown, watermark
+from authcat.project import ask_file_name, open_project, shown, watermark
 
 FLAG_COLOR = 'purple'
 

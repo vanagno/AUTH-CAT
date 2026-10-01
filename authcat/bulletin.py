@@ -14,8 +14,8 @@ Filtering is based on the fields in each event's Origin section:
 Matching event blocks are copied as raw bytes (apart from normalising line
 endings to \n), so the complete original event content is retained.
 
-This is the first step of an analysis: it asks for a project name and creates
-Projects/<name>/ (see project.py), puts the bulletin in its Input folder and
+This is the first step of an analysis (``authcat bul``): it asks for a project
+name and creates Projects/<name>/ (see project.py), puts the bulletin in its Input folder and
 starts the project record, Projects/<name>/<name>.json. Every later script
 works inside that project.
 
@@ -32,7 +32,7 @@ import time
 import urllib.error
 import urllib.request
 
-from project import Project, shown
+from authcat.project import Project, shown
 
 DEFAULT_BASE_URL = "https://seismo.auth.gr/wp-content/uploads/CATALOGS"
 USER_AGENT = "auth-bulletin-downloader/2.0 (+python-urllib)"

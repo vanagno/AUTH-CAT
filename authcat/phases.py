@@ -22,11 +22,11 @@ the project's folder (see ``project.py``).
 
 Usage
 -----
-    python phases.py                                       # asks for both questions
-    python phases.py -i Input/Kef24.bul                    # asks for the format only
-    python phases.py -i Input/Kef24.bul -f both            # asks nothing
-    python phases.py -i Input/Kef24.bul -f both -d out      # both, elsewhere
-    python phases.py -i Input/Kef24.bul -f hypodd -o p.dat # one format, named
+    authcat pha                                            # asks for both questions
+    authcat pha -i Input/Kef24.bul                         # asks for the format only
+    authcat pha -i Input/Kef24.bul -f both                 # asks nothing
+    authcat pha -i Input/Kef24.bul -f both -d out          # both, elsewhere
+    authcat pha -i Input/Kef24.bul -f hypodd -o p.dat      # one format, named
 
 
 """
@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from project import ask_file_name, open_project, shown
+from authcat.project import ask_file_name, open_project, shown
 
 __all__ = [
     "Arrival",

@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "authcat"
+dynamic = ["version"]
+description = "A Python toolkit for exploring and analysing earthquake bulletins from the Aristotle University of Thessaloniki Seismological Station"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Pavlos Bonatis" },
+    { name = "Vasilis Anagnostou" },
+]
+keywords = ["seismology", "earthquake catalogue", "bulletin", "magnitude of completeness", "Omori"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.22",
+    "pandas>=1.5",
+    "matplotlib>=3.6",
+    "scipy>=1.9",
+    "cartopy>=0.21",
+    "emcee>=3.0",
+    "corner>=2.2",
+    "reportlab>=3.6",
+    "tqdm",
+]
+
+[project.urls]
+Repository = "https://github.com/vanagno/AUTH-CAT"
+
+[project.scripts]
+authcat = "authcat.cli:main"
+
+[tool.setuptools]
+# Utilities/ holds data only (the station list and the report logo)
+packages = ["authcat", "authcat.Utilities"]
+
+[tool.setuptools.dynamic]
+version = { attr = "authcat.__version__" }
+
+[tool.setuptools.package-data]
+"authcat.Utilities" = ["*.sta", "*.png"]

@@ -24,7 +24,7 @@ from __future__ import annotations
 import os
 import re
 
-from project import ask_file_name, open_project, shown
+from authcat.project import ask_file_name, open_project, shown
 
 HYPO71_TERMINATOR = "                 10"
 

@@ -4,7 +4,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import numpy as np
 import os
-from project import ask_file_name, open_project, shown, watermark
+from authcat.project import ask_file_name, open_project, shown, watermark
 
 def read_earthquake_catalog(file_path):
     """

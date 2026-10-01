@@ -31,7 +31,7 @@ except ImportError as exc:
         "report.py requires ReportLab. Install it with: pip install reportlab"
     ) from exc
 
-from project import UTILITIES_DIR, open_project, shown
+from authcat.project import UTILITIES_DIR, open_project, shown
 
 
 DEFAULT_REPORT_DIR = Path("Reports")
