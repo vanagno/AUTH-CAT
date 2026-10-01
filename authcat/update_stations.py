@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """Update the station list regd.sta from the FDSN station web services.
 
-``authcat stup`` looks up the coordinates of every station AUTH-CAT needs --
-those already in regd.sta and those named in the bulletins of the projects
-in Projects/ -- and rewrites Utilities/regd.sta, the list ``authcat sta``
-uses, keeping the previous one as Utilities/regd.sta.bak.
+``authcat stup`` brings Utilities/regd.sta, the station list every project
+uses (``authcat sta`` reads it), up to date with what the station services
+publish, and keeps the previous list as Utilities/regd.sta.bak:
+
+* every station in the list takes its most recent position;
+* every station the services hold in the area -- Greece and its neighbours,
+  lat 33.5 to 43.5, lon 18 to 31, unless --region gives another -- that is
+  missing from the list is added.
+
+Nothing is removed: a listed station the services do not hold keeps its line.
 
 Coordinates come from the FDSN station services, the standard way seismic
 networks publish their metadata:
@@ -17,21 +23,20 @@ networks publish their metadata:
 When no routing service answers, the EIDA federator (eida-federator.ethz.ch)
 and NOA are asked instead.
 
-Each service is asked once for every station in the region the list covers;
-the station codes are matched here. A code found in more than one network is
-settled by the network the bulletins name it with, then by preferring
-permanent networks to temporary ones, then by the position already listed; a code that still cannot be settled keeps its old line and is
-reported. A position more than FAR_KM from the listed one is more likely
-another station with the same code than a move, so it is reported and the
-listed line kept, unless the bulletins confirm the station's network or
---accept-far is given.
+The list holds station codes only, while the services name each station by
+network and code, and the same code can be used by more than one network.
+Permanent networks are preferred to temporary ones; among stations of the
+same code at different places, a listed station takes the one nearest its
+listed position, and a new one the most recent. A position more than FAR_KM
+from the listed one is more likely another station with the same code than
+a move, so it is reported and the listed line kept, unless --accept-far is
+given.
 
 Usage
 -----
-    authcat stup                       # current positions
-    authcat stup --date 2021-03-03     # positions valid on that date
-    authcat stup --dry-run             # show what would change, write nothing
-    authcat stup -b other.bul          # also the stations of another bulletin
+    authcat stup                            # update the list
+    authcat stup --dry-run                  # show what would change, write nothing
+    authcat stup --region 34 42 19 30       # add the missing stations of another area
 
 Standard library only.
 """
@@ -51,7 +56,7 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-from authcat.project import PROJECTS_DIR, UTILITIES_DIR, list_projects, shown
+from authcat.project import UTILITIES_DIR, shown
 
 #: EIDA routing services: they say which data centre holds which network, so
 #: each data centre can be asked directly.
@@ -69,18 +74,19 @@ FALLBACK_SERVICES = [
 USER_AGENT = "authcat-stup (+https://github.com/vanagno/AUTH-CAT)"
 STATION_FILE = "regd.sta"
 
-#: Degrees added around the stations already listed to make the query region.
-MARGIN = 1.0
-#: Region used when there is no station list to take it from: Greece and its
-#: neighbours.
+#: The area whose missing stations are added, (minlat, maxlat, minlon,
+#: maxlon): Greece and its neighbours.
 DEFAULT_REGION = (33.5, 43.5, 18.0, 31.0)
+#: Degrees added around the listed stations when asking for them, so that a
+#: listed station outside the area is still looked up.
+MARGIN = 0.1
 #: IRIS's network of synthetic seismograms: never a real station.
 SYNTHETIC_NETWORKS = {"SY"}
 
 #: Positions further apart than this (km) are treated as different places.
 MOVED_KM = 1.0
 #: A service position further than this (km) from the listed one is kept out
-#: unless confirmed (see the module docstring).
+#: unless --accept-far is given (see the module docstring).
 FAR_KM = 10.0
 
 
@@ -98,7 +104,7 @@ class Epoch:
 
 
 # --------------------------------------------------------------------------
-# inputs
+# the station list and the area
 # --------------------------------------------------------------------------
 
 
@@ -118,43 +124,18 @@ def read_station_list(path: str | os.PathLike) -> dict[str, tuple[float, float]]
     return stations
 
 
-def project_bulletins() -> list[Path]:
-    """The bulletins in the Input folder of every project in Projects/."""
-    return sorted(
-        path
-        for name in list_projects()
-        for path in (PROJECTS_DIR / name / "Input").glob("*.bul")
-    )
+def covering(area: tuple[float, float, float, float], positions,
+             margin: float = MARGIN) -> tuple[float, float, float, float]:
+    """The smallest ``(minlat, maxlat, minlon, maxlon)`` holding ``area`` and
+    ``positions``, these widened by ``margin`` degrees."""
+    lats = [area[0], area[1]] + [p[0] + d for p in positions for d in (-margin, margin)]
+    lons = [area[2], area[3]] + [p[1] + d for p in positions for d in (-margin, margin)]
+    return (max(min(lats), -90.0), min(max(lats), 90.0),
+            max(min(lons), -180.0), min(max(lons), 180.0))
 
 
-def bulletin_stations(paths: list[Path]) -> dict[str, set[str]]:
-    """``{station code: {networks}}`` named in the bulletins' phase and
-    station-magnitude rows."""
-    from authcat.catalog import read_bulletin
-
-    found: dict[str, set[str]] = {}
-    for path in paths:
-        events, _ = read_bulletin(path)
-        for ev in events:
-            for row in (*ev.picks, *ev.station_magnitudes):
-                found.setdefault(row.station, set()).add(row.network)
-    return found
-
-
-def region(positions, margin: float = MARGIN) -> tuple[float, float, float, float]:
-    """``(minlat, maxlat, minlon, maxlon)`` around ``positions``, widened by
-    ``margin`` degrees."""
-    positions = list(positions)
-    if not positions:
-        return DEFAULT_REGION
-    lats = [p[0] for p in positions]
-    lons = [p[1] for p in positions]
-    return (
-        max(min(lats) - margin, -90.0),
-        min(max(lats) + margin, 90.0),
-        max(min(lons) - margin, -180.0),
-        min(max(lons) + margin, 180.0),
-    )
+def inside(epoch: Epoch, area: tuple[float, float, float, float]) -> bool:
+    return area[0] <= epoch.lat <= area[1] and area[2] <= epoch.lon <= area[3]
 
 
 # --------------------------------------------------------------------------
@@ -289,16 +270,8 @@ def km(a: tuple[float, float], b: tuple[float, float]) -> float:
     return 2 * 6371.0 * math.asin(min(1.0, math.sqrt(h)))
 
 
-def pick_epoch(epochs: list[Epoch], when: dt.datetime | None) -> Epoch | None:
-    """The epoch valid at ``when``; with no date, the one that started last."""
-    if when is not None:
-        epochs = [
-            e for e in epochs
-            if (e.start is None or e.start <= when) and (e.end is None or when < e.end)
-        ]
-    if not epochs:
-        return None
-    return max(epochs, key=lambda e: e.start or dt.datetime.min)
+def _started(epoch: Epoch) -> dt.datetime:
+    return epoch.start or dt.datetime.min
 
 
 def is_temporary(network: str) -> bool:
@@ -306,29 +279,29 @@ def is_temporary(network: str) -> bool:
     return network[:1].isdigit() or network[:1] in "XYZ"
 
 
-def resolve(by_network: dict[str, list[Epoch]], networks_named: set[str],
-            old: tuple[float, float] | None,
-            when: dt.datetime | None) -> tuple[Epoch | None, str]:
-    """Choose the position for one station code.
+def choose(by_network: dict[str, list[Epoch]],
+           listed: tuple[float, float] | None) -> tuple[Epoch, str]:
+    """Choose the position for one station code from its epochs in each
+    network; ``listed`` is its position in the list, if it has one.
 
-    Returns the chosen epoch, or None, and a note for the report.
+    Returns the chosen epoch and a note for the report ("" when the choice
+    was plain).
     """
-    named = [n for n in by_network if n in networks_named]
     permanent = [n for n in sorted(by_network) if not is_temporary(n)]
-    networks = named or permanent or sorted(by_network)
-    picks = [p for n in networks if (p := pick_epoch(by_network[n], when))]
-    if not picks:
-        return None, "not operating on that date"
+    networks = permanent or sorted(by_network)
+    # each network's most recent epoch, the most recent first
+    picks = sorted((max(by_network[n], key=_started) for n in networks),
+                   key=_started, reverse=True)
     if len(picks) == 1:
         return picks[0], ""
     spread = max(km((a.lat, a.lon), (b.lat, b.lon)) for a in picks for b in picks)
     if spread <= MOVED_KM:
         return picks[0], ""  # the same site under each network
-    nets = ", ".join(p.network for p in picks)
-    if old is not None:
-        best = min(picks, key=lambda p: km((p.lat, p.lon), old))
-        return best, f"also in {nets}; took {best.network}, nearest the listed position"
-    return None, f"in {nets} at different places"
+    nets = ", ".join(sorted(p.network for p in picks))
+    if listed is not None:
+        best = min(picks, key=lambda p: km((p.lat, p.lon), listed))
+        return best, f"in {nets} at different places; took {best.network}, nearest the listed position"
+    return picks[0], f"in {nets} at different places; took {picks[0].network}, the most recent"
 
 
 # --------------------------------------------------------------------------
@@ -336,33 +309,21 @@ def resolve(by_network: dict[str, list[Epoch]], networks_named: set[str],
 # --------------------------------------------------------------------------
 
 
-def _date(text: str) -> dt.datetime:
-    try:
-        return dt.datetime.strptime(text.strip(), "%Y-%m-%d")
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"invalid date {text!r}, expected YYYY-MM-DD")
-
-
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="Update the station list regd.sta from the FDSN station services "
-        "(the EIDA data centres and IRIS). Writes regd.sta into this folder, where "
-        "'authcat sta' uses it."
+        description="Update the station list Utilities/regd.sta, which every project "
+        "uses, from the FDSN station services (the EIDA data centres and IRIS): the "
+        "listed stations take their most recent positions, and the stations of the "
+        "area missing from the list are added."
     )
-    ap.add_argument("--date", type=_date, metavar="YYYY-MM-DD",
-                    help="use the positions valid on this date instead of the current ones")
-    ap.add_argument("-b", "--bulletin", action="append", default=[], metavar="FILE",
-                    help="also look up the stations of this bulletin (repeatable); those "
-                         "of every project in Projects/ are always included")
     ap.add_argument("-o", "--output", default=None,
                     help="file to write instead of Utilities/regd.sta (which authcat sta uses)")
     ap.add_argument("--region", type=float, nargs=4,
                     metavar=("MINLAT", "MAXLAT", "MINLON", "MAXLON"),
-                    help="region to ask for (default: the listed stations plus a "
-                         f"{MARGIN:g} degree margin)")
+                    help="area whose missing stations are added (default: Greece and its "
+                         "neighbours, lat {:g} to {:g}, lon {:g} to {:g})".format(*DEFAULT_REGION))
     ap.add_argument("--accept-far", action="store_true",
-                    help=f"take service positions more than {FAR_KM:g} km from the listed "
-                         "ones even when the bulletins do not confirm the network")
+                    help=f"take service positions more than {FAR_KM:g} km from the listed ones")
     ap.add_argument("--service", action="append", metavar="URL",
                     help="FDSN station service to ask instead of the EIDA data centres "
                          "and IRIS (repeatable)")
@@ -379,16 +340,8 @@ def main(argv: list[str] | None = None) -> int:
     old = read_station_list(station_list)
     print(f"Station list: {len(old)} stations from Utilities/{STATION_FILE}")
 
-    bulletins = project_bulletins() + [Path(b) for b in args.bulletin]
-    missing_files = [b for b in bulletins if not b.is_file()]
-    if missing_files:
-        ap.error(f"no such bulletin: {missing_files[0]}")
-    named = bulletin_stations(bulletins)
-    print(f"Bulletins: {len(bulletins)}, naming {len(named)} stations "
-          f"({len(set(named) - set(old))} not in the list)")
-
-    wanted = sorted(set(old) | set(named))
-    box = tuple(args.region) if args.region else region(old.values())
+    area = tuple(args.region) if args.region else DEFAULT_REGION
+    box = covering(area, old.values())
     if args.service:
         services = [(url, url) for url in args.service]
     else:
@@ -438,47 +391,47 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
         return 1
 
-    final: dict[str, tuple[float, float]] = {}
-    unchanged, moved, shifted, added, kept, lost, notes = [], [], [], [], [], [], []
-    far, small = [], 0
-    for code in wanted:
+    final: dict[str, tuple[float, float]] = dict(old)
+    unchanged, moved, shifted, far, kept, notes = [], [], [], [], [], []
+    added: dict[str, int] = {}  # network -> stations added
+    small = unsure = 0
+    for code in sorted(set(old) | set(candidates)):
         before = old.get(code)
-        epoch, note = (None, "not found")
-        if code in candidates:
-            epoch, note = resolve(candidates[code], named.get(code, set()), before, args.date)
-        if note and epoch is not None:
-            notes.append(f"{code}: {note}")
-        if epoch is None:
-            reason = "" if note == "not found" else f" ({note})"
-            if before is not None:
-                final[code] = before
-                kept.append(f"{code}{reason}")
-            else:
-                lost.append(f"{'/'.join(sorted(named.get(code, ''))) or '?'}.{code}{reason}")
-            continue
-        after = (round(epoch.lat, 4), round(epoch.lon, 4))
+        by_network = candidates.get(code, {})
         if before is None:
-            final[code] = after
-            added.append(f"{epoch.network}.{code}")
-        elif after == (round(before[0], 4), round(before[1], 4)):
-            final[code] = after
-            unchanged.append(code)
-        else:
-            distance = km(before, after)
-            confirmed = epoch.network in named.get(code, set())
-            if distance > FAR_KM and not (confirmed or args.accept_far):
-                final[code] = before
-                far.append(f"{epoch.network}.{code} {distance:.1f} km")
+            # a new station: added when it lies in the area
+            by_network = {n: in_area for n, epochs in by_network.items()
+                          if (in_area := [e for e in epochs if inside(e, area)])}
+            if not by_network:
                 continue
-            final[code] = after
-            if distance > MOVED_KM:
-                moved.append(f"{epoch.network}.{code} {distance:.1f} km")
-            else:
-                shifted.append(code)
-                small += distance < 0.1
+            epoch, note = choose(by_network, None)
+            final[code] = (round(epoch.lat, 4), round(epoch.lon, 4))
+            added[epoch.network] = added.get(epoch.network, 0) + 1
+            unsure += bool(note)
+            continue
+        if not by_network:
+            kept.append(code)
+            continue
+        epoch, note = choose(by_network, before)
+        if note:
+            notes.append(f"{code}: {note}")
+        after = (round(epoch.lat, 4), round(epoch.lon, 4))
+        if after == (round(before[0], 4), round(before[1], 4)):
+            unchanged.append(code)
+            continue
+        distance = km(before, after)
+        if distance > FAR_KM and not args.accept_far:
+            far.append(f"{epoch.network}.{code} {distance:.1f} km")
+            continue
+        final[code] = after
+        if distance > MOVED_KM:
+            moved.append(f"{epoch.network}.{code} {distance:.1f} km")
+        else:
+            shifted.append(code)
+            small += distance < 0.1
 
     print(f"\n{len(final)} stations: {len(unchanged)} unchanged, "
-          f"{len(shifted) + len(moved)} updated, {len(added)} added, "
+          f"{len(shifted) + len(moved)} updated, {sum(added.values())} added, "
           f"{len(kept) + len(far)} kept as listed")
     if moved:
         print(f"  moved more than {MOVED_KM:g} km: " + ", ".join(moved))
@@ -490,15 +443,16 @@ def main(argv: list[str] | None = None) -> int:
               "station with the same code -- kept as listed; check them, and use "
               "--accept-far to take them: " + ", ".join(far))
     if added:
-        print("  added: " + ", ".join(added))
+        by_count = sorted(added.items(), key=lambda item: (-item[1], item[0]))
+        print("  added, by network: " + ", ".join(f"{n} {count}" for n, count in by_count))
+        if unsure:
+            print(f"  the most recent station was taken for {unsure} added "
+                  f"code{'s' if unsure != 1 else ''} used by more than one network "
+                  "at different places")
     if kept:
-        print("  kept as listed (not found unless noted): " + ", ".join(kept))
-    if lost:
-        print("  named in bulletins but not found (unless noted), so not listed: " + ", ".join(lost))
+        print("  not held by the services, so kept as listed: " + ", ".join(kept))
     if notes:
         print("  notes: " + "; ".join(notes))
-    if lost and not args.region:
-        print("  (a station outside the region asked for is not found; widen it with --region)")
 
     if args.dry_run:
         print("\nDry run: nothing written.")
@@ -509,8 +463,6 @@ def main(argv: list[str] | None = None) -> int:
     label = f"Utilities/{STATION_FILE}" if in_utilities else shown(output)
     today = dt.date.today().isoformat()
     header = f"# Last updated {today} from FDSN station services by authcat stup"
-    if args.date:
-        header += f"; positions valid on {args.date:%Y-%m-%d}"
     lines = [header] + [f"{code:<4} {lat:.4f} {lon:.4f}" for code, (lat, lon) in sorted(final.items())]
     backed_up = False
     try:
