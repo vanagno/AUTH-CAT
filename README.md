@@ -43,6 +43,7 @@ options, where it has any.
 | `vpvs` | `wadati.py` | Vp/Vs estimation through the Wadati method |
 | `ou` | `omori_utsu.py` | Estimation of the Omori-Utsu law parameters |
 | `rep` | `report.py` | Generate the project report |
+| `batch` | `batch.py` | Run several steps on a project in one go, without questions |
 | `project` | `project.py` | List the projects, or start one from a bulletin you already have |
 
 `python -m authcat <command>` works the same way, and the script names work as
@@ -101,7 +102,22 @@ release.
    accept `-p/--project`. When a command asks for a bulletin, catalogue or
    phase list, pressing Enter takes the project's own file (e.g. `Tyrnavos.bul`, `Tyrnavos_cat.txt`).
 
-3. Build the PDF report of everything recorded so far:
+3. Or run the routine steps in one go, without questions -- figures are saved
+   rather than shown:
+
+   ```
+   authcat batch Arkal                      # cat map hist mt mc nt mct mags sta pha vpvs ou rep
+   authcat batch Arkal -s cat map hist mc   # only some steps
+   authcat batch Arkal --mc 2.5 --omori-start "2021-09-27 06:17:21"
+   ```
+
+   The Mc for `nt` defaults to the one found by `mc` (`--mc-method`), `ou`
+   starts at the largest earthquake, and `mags` only plots the residuals: the
+   steps that need judgement (recomputing magnitudes with `mags` and `rmag`,
+   choosing the stations in `pse`) are best run one by one.
+   `authcat batch -h` lists all options.
+
+4. Build the PDF report of everything recorded so far:
 
    ```
    authcat rep                    # asks which project

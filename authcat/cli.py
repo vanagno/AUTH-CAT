@@ -39,6 +39,8 @@ COMMANDS = [
     (("vpvs",), "wadati", False, "Vp/Vs estimation through the Wadati method"),
     (("ou",), "omori_utsu", False, "Estimation of the Omori-Utsu law parameters"),
     (("rep",), "report", True, "Generate the project report"),
+    (("batch",), "batch", True,
+     "Run several steps on a project in one go, without questions"),
     (("project",), "project", True,
      "List the projects, or start one from a bulletin you already have"),
 ]
