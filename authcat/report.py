@@ -74,6 +74,16 @@ def safe_get(data: dict[str, Any], *keys: str, default: Any = None) -> Any:
     return current
 
 
+def last_run_details(data: dict[str, Any], script: str) -> dict[str, Any]:
+    """The inputs and parameters of the latest run of ``script`` in the
+    record's history, e.g. the window and filter lengths of Mc_time.py."""
+    for entry in reversed(data.get("history") or []):
+        if isinstance(entry, dict) and entry.get("script") == script:
+            details = entry.get("details")
+            return details if isinstance(details, dict) else {}
+    return {}
+
+
 def is_available(section: Any) -> bool:
     return isinstance(section, dict) and section.get("available", False) is True
 
@@ -92,18 +102,41 @@ def fmt(value: Any, decimals: int | None = None) -> str:
     return str(value)
 
 
+def parse_datetime(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
 def fmt_datetime(value: Any) -> str:
+    """A date and time as YYYY/MM/DD HH:MM:SS(.fff)."""
     if not value:
         return "-"
 
-    text = str(value)
-    try:
-        dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
-        if dt.microsecond:
-            return dt.strftime("%Y-%m-%d %H:%M:%S.%f").rstrip("0").rstrip(".")
-        return dt.strftime("%Y-%m-%d %H:%M:%S")
-    except ValueError:
-        return text
+    dt = parse_datetime(value)
+    if dt is None:
+        return str(value)
+    if dt.microsecond:
+        return dt.strftime("%Y/%m/%d %H:%M:%S.%f").rstrip("0").rstrip(".")
+    return dt.strftime("%Y/%m/%d %H:%M:%S")
+
+
+def fmt_date(value: Any) -> str:
+    """A date as YYYY/MM/DD."""
+    if not value:
+        return "-"
+    dt = parse_datetime(value)
+    return dt.strftime("%Y/%m/%d") if dt else str(value)
+
+
+def date_range(start: Any, end: Any) -> str:
+    """Two dates as YYYY/MM/DD - YYYY/MM/DD."""
+    if not start and not end:
+        return "-"
+    return f"{fmt_date(start)} - {fmt_date(end)}"
 
 
 def range_text(
@@ -154,7 +187,7 @@ def download_rows(bulletin: Any) -> list[list[Any]]:
     else:
         area = "No geographic limits"
     return [
-        ["Download period", range_text(bulletin.get("start_date"), bulletin.get("end_date"))],
+        ["Download period", date_range(bulletin.get("start_date"), bulletin.get("end_date"))],
         ["Download area", area],
     ]
 
@@ -390,12 +423,20 @@ def add_dataset_overview(
         )
     )
 
-    start_time = fmt_datetime(cat.get("start_time"))
-    end_time = fmt_datetime(cat.get("end_time"))
-    if start_time == "-" and end_time == "-":
-        time_period = "-"
+    time_period = date_range(cat.get("start_time"), cat.get("end_time"))
+    start, end = parse_datetime(cat.get("start_time")), parse_datetime(cat.get("end_time"))
+    duration = rate = "-"
+    if start and end and end > start:
+        days = (end - start).total_seconds() / 86400
+        duration = f"{fmt(days, 1)} days"
+        if isinstance(cat.get("total_events"), int):
+            per_day = cat["total_events"] / days
+            rate = f"{fmt(per_day, 2 if per_day < 10 else 1)} events/day"
+    largest = cat.get("largest_event") or {}
+    if largest.get("magnitude") is not None:
+        largest_text = f"M {fmt(largest['magnitude'], 2)} on {fmt_datetime(largest.get('time'))}"
     else:
-        time_period = f"{start_time} - {end_time}"
+        largest_text = "-"
 
     latitude_range = range_text(
         cat.get("latitude_min"),  cat.get("latitude_max"), "°", 3
@@ -413,7 +454,10 @@ def add_dataset_overview(
         ["Catalogue", fmt(project.get("catalogue_file"))],
         *download_rows(data.get("bulletin")),
         ["Number of events", fmt(cat.get("total_events"))],
-#        ["Time period", time_period],
+        ["Time period", time_period],
+        ["Catalogue duration", duration],
+        ["Average event rate", rate],
+        ["Largest event", largest_text],
         ["Study area", coordinates],
         ["Depth range", range_text(cat.get("depth_min_km"), cat.get("depth_max_km"), " km", 1)],
         ["Magnitude range", magnitude_range_text(cat.get("magnitude_min"), cat.get("magnitude_max"))],
@@ -509,7 +553,7 @@ def add_temporal_evolution(
     add_section_heading(story, "Temporal evolution", styles)
     story.append(
         Paragraph(
-            "This section summarizes the temporal evolution of the analyzed seismicity. The magnitude-time plot shows how earthquake"
+            "This section summarizes the temporal evolution of the analyzed seismicity. The magnitude-time plot shows how earthquake "
             "magnitudes vary throughout the analyzed period, while the cumulative number - time plots highlight changes in the rate of seismic activity.",
             styles["body"],
         )
@@ -530,12 +574,18 @@ def add_mc(
         return
 
     add_section_heading(story, "Magnitude of completeness", styles)
+    mc_time = last_run_details(data, "Mc_time.py")
+    mc_time_text = ""
+    if mc_time.get("window_length") and mc_time.get("filter_length"):
+        mc_time_text = (" The temporal variation of Mc was evaluated using a moving window of "
+                        f"{mc_time['window_length']} events and a smoothing filter of "
+                        f"{mc_time['filter_length']} events.")
     story.append(
         Paragraph(
             "Magnitude of completeness (Mc) represents the lowest magnitude above which the earthquake catalogue is considered reliably complete. "
             "AUTH-CAT estimates Mc using the MAXC, GFT and MBS methods and reports the corresponding Gutenberg-Richter b-values and their uncertainties."
-            "The temporal variation of Mc was evaluated using a moving window of XXX events and a smoothing filter of XXX events." 
-            "Further information on the implemented methods is provided in Section 3.5 of the manual.",
+            + mc_time_text +
+            " Further information on the implemented methods is provided in Section 3.5 of the manual.",
             styles["body"],
         )
     )
@@ -809,7 +859,7 @@ OMORI_BOUND_LABELS = {
 
 
 def sequence_bound(time_value: Any, mode: Any) -> str:
-    """A sequence start or end, e.g. '2021-03-03 10:16:08.367 (largest earthquake)'."""
+    """A sequence start or end, e.g. '2021/03/03 10:16:08.367 (largest earthquake)'."""
     text = fmt_datetime(time_value)
     if mode in OMORI_BOUND_LABELS:
         return f"{text} ({OMORI_BOUND_LABELS[mode]})" if text != "-" else OMORI_BOUND_LABELS[mode]
@@ -970,7 +1020,7 @@ def build_pdf(data: dict[str, Any], project_root: Path, output_path: Path) -> No
     story.append(
         Paragraph(
             f"Project: {project_name}<br/>"
-            f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            f"Generated: {datetime.now().strftime('%Y/%m/%d %H:%M')}",
             styles["subtitle"],
         )
     )
