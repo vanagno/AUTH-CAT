@@ -415,22 +415,12 @@ def add_dataset_overview(
         project = {}
 
     add_section_heading(story, "Dataset overview", styles)
-    story.append(
-        Paragraph(
-            "This section summarizes the catalogue information stored in the "
-            "AUTH-CAT project record (/Projects/<Project name>/<Project name>.json). The project record contains " 
-            "the main metadata and analysis results generated during the AUTH-CAT workflow and is used to create this report." \
-            "The analyzed catalogue contains XXX earthquakes spanning XXX days, from XXXX to XXXX. Event magnitudes range " \
-            "from XXX to XXX, while focal depths range from approximately XXX to XXX km.",
-            styles["body"],
-        )
-    )
 
     time_period = date_range(cat.get("start_time"), cat.get("end_time"))
     start, end = parse_datetime(cat.get("start_time")), parse_datetime(cat.get("end_time"))
+    days = (end - start).total_seconds() / 86400 if start and end and end > start else None
     duration = rate = "-"
-    if start and end and end > start:
-        days = (end - start).total_seconds() / 86400
+    if days:
         duration = f"{fmt(days, 1)} days"
         if isinstance(cat.get("total_events"), int):
             per_day = cat["total_events"] / days
@@ -440,6 +430,24 @@ def add_dataset_overview(
         largest_text = f"M {fmt(largest['magnitude'], 2)} on {fmt_datetime(largest.get('time'))}"
     else:
         largest_text = "-"
+
+    # The introduction, with this catalogue's own numbers; a sentence whose
+    # values are not recorded is left out.
+    name = project.get("name")
+    record = f"Projects/{escape(str(name))}/{escape(str(name))}.json" if name else "the project folder"
+    intro = (
+        "This section summarizes the catalogue information stored in the "
+        f"AUTH-CAT project record ({record}). The project record contains "
+        "the main metadata and analysis results generated during the AUTH-CAT workflow and is used to create this report."
+    )
+    if isinstance(cat.get("total_events"), int) and days:
+        intro += (f" The analyzed catalogue contains {cat['total_events']} earthquakes spanning "
+                  f"{fmt(days, 1)} days, from {fmt_date(start)} to {fmt_date(end)}.")
+    limits = [cat.get(key) for key in ("magnitude_min", "magnitude_max", "depth_min_km", "depth_max_km")]
+    if all(value is not None for value in limits):
+        intro += (f" Event magnitudes range from {fmt(limits[0], 1)} to {fmt(limits[1], 1)}, while "
+                  f"focal depths range from approximately {fmt(limits[2], 1)} to {fmt(limits[3], 1)} km.")
+    story.append(Paragraph(intro, styles["body"]))
 
     latitude_range = range_text(
         cat.get("latitude_min"),  cat.get("latitude_max"), "°", 3
