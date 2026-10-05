@@ -33,7 +33,7 @@ axs[0, 0].set_title('Depths (km)')
 add_stats_annotation(axs[0, 0], df['Depth'], 'black')
 #----- Histogram for Magnitudes -------#
 axs[0, 1].hist(df['M'], bins=20, color='orange', edgecolor='black')
-axs[0, 1].set_title('Magnitudes (ML)')
+axs[0, 1].set_title('$M_{L}$')
 add_stats_annotation(axs[0, 1], df['M'], 'black')
 #----- Histogram for RMS --------------#
 axs[1, 0].hist(df['RMS'], bins=20, color='green', edgecolor='black')
