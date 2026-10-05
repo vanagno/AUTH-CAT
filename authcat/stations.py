@@ -49,36 +49,124 @@ def write_output_file(counts, station_coordinates, output_file_path):
                 print(f"Warning: Coordinates for station {station} not found.")
 
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as patheffects
+from matplotlib.text import Text
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import numpy as np
 import os
 from authcat.project import ask_file_name, open_project, shown, UTILITIES_DIR, watermark
 
+MARKER_SIZE = 100       # triangle area, points^2
+LABEL_SIZE = 6          # station names, points
+LABEL_STEP = 7          # distance of a name from its triangle, points; tried at 1-4 steps
+
+
+#: Directions tried around a triangle, in order of preference (degrees,
+#: anticlockwise from east): above, the diagonals, the sides, below, then
+#: the directions in between.
+LABEL_DIRECTIONS = (90, 45, 135, 0, 180, 315, 225, 270,
+                    67.5, 112.5, 22.5, 157.5, 337.5, 202.5, 292.5, 247.5)
+LABEL_RINGS = 6
+
+
+def _overlap(a, b):
+    """Overlapping area of two (x0, y0, x1, y1) boxes."""
+    return max(0.0, min(a[2], b[2]) - max(a[0], b[0])) * max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
+
+
+def _outline(colour):
+    """A thin halo that keeps a name of this colour readable: white around
+    dark names, dark grey around light ones."""
+    r, g, b = colour[:3]
+    light = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.65
+    return [patheffects.withStroke(linewidth=1.0, foreground='0.25' if light else 'white')]
+
+
+def place_labels(ax, stations):
+    """Write each station name next to its triangle, in the triangle's colour.
+
+    ``stations`` is a list of (name, lon, lat, colour), the most important
+    first. Each name takes the first spot around its triangle -- see
+    LABEL_DIRECTIONS, one to LABEL_RINGS steps away -- that stays on the map
+    and overlaps no triangle and no name already placed; when there is none,
+    the spot that overlaps least. A name placed away from its triangle gets a
+    thin leader line to it.
+    """
+    fig = ax.figure
+    fig.canvas.draw()  # fixes the map extent and the colourbar layout
+    renderer = fig.canvas.get_renderer()
+    frame = ax.get_window_extent(renderer)
+    half = np.sqrt(MARKER_SIZE) / 2 * fig.dpi / 72
+    occupied = []
+    for _, lon, lat, _ in stations:
+        x, y = ax.transData.transform((lon, lat))
+        occupied.append((x - half, y - half, x + half, y + half))
+
+    spots = [(ring * LABEL_STEP * np.cos(np.radians(angle)),
+              ring * LABEL_STEP * np.sin(np.radians(angle)), ring)
+             for ring in range(1, LABEL_RINGS + 1) for angle in LABEL_DIRECTIONS]
+
+    def label(name, lon, lat, colour, dx, dy, ring):
+        ha = 'center' if abs(dx) < 0.01 else ('left' if dx > 0 else 'right')
+        va = 'center' if abs(dy) < 0.01 else ('bottom' if dy > 0 else 'top')
+        leader = (dict(arrowstyle='-', color='0.3', linewidth=0.4, shrinkA=0, shrinkB=half * 72 / fig.dpi)
+                  if ring > 1 else None)
+        text = ax.annotate(name, (lon, lat), xytext=(dx, dy), textcoords='offset points',
+                           ha=ha, va=va, fontsize=LABEL_SIZE, color=colour, zorder=7,
+                           path_effects=_outline(colour), arrowprops=leader)
+        text.update_positions(renderer)
+        box = Text.get_window_extent(text, renderer)  # the name only, not its leader line
+        return text, (box.x0, box.y0, box.x1, box.y1)
+
+    for name, lon, lat, colour in stations:
+        best = None  # (overlap, spot) of the least crowded spot on the map
+        for spot in spots:
+            text, box = label(name, lon, lat, colour, *spot)
+            text.remove()
+            if not (frame.x0 <= box[0] and box[2] <= frame.x1
+                    and frame.y0 <= box[1] and box[3] <= frame.y1):
+                continue
+            crowding = sum(_overlap(box, other) for other in occupied)
+            if best is None or crowding < best[0]:
+                best = (crowding, spot)
+            if crowding == 0:
+                break
+        text, box = label(name, lon, lat, colour, *(best[1] if best else spots[0]))
+        occupied.append(box)
+
+
 def generate_stations_map(counts, station_coordinates, output_map_path):
     p_phase_counts = [phases['P'] for phases in counts.values()]
     threshold = np.percentile(p_phase_counts, 80)
-    
+
     fig = plt.figure(figsize=(10, 5))
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
     ax.add_feature(cfeature.COASTLINE.with_scale('10m'))
     ax.add_feature(cfeature.BORDERS, linestyle=':')
-    
+
     p_counts = np.array([phases['P'] for station, phases in counts.items() if phases['P'] >= threshold])
     norm = plt.Normalize(vmin=p_counts.min(), vmax=p_counts.max())
     cmap = plt.colormaps['viridis']
-    
-    # One scatter call, coloured by the number of P phases
-    shown_stations = [(station, phases['P']) for station, phases in counts.items()
-                      if phases['P'] >= threshold and station in station_coordinates]
+
+    # One scatter call, coloured by the number of P phases and drawn above the
+    # coastlines, the stations with the most P phases on top
+    shown_stations = sorted(((station, phases['P']) for station, phases in counts.items()
+                             if phases['P'] >= threshold and station in station_coordinates),
+                            key=lambda item: item[1])
     lons = [float(station_coordinates[station][1]) for station, _ in shown_stations]
     lats = [float(station_coordinates[station][0]) for station, _ in shown_stations]
-    ax.scatter(lons, lats, s=100, c=[p for _, p in shown_stations], cmap=cmap, norm=norm, marker='^', edgecolor='k', linewidth=0.5, transform=ccrs.Geodetic())
-    for (station, _), lon, lat in zip(shown_stations, lons, lats):
-        ax.text(lon, lat + 0.03, station, transform=ccrs.Geodetic(), fontsize=6, ha='center', va='bottom')
+    ax.scatter(lons, lats, s=MARKER_SIZE, c=[p for _, p in shown_stations], cmap=cmap, norm=norm,
+               marker='^', edgecolor='k', linewidth=0.5, zorder=5, transform=ccrs.PlateCarree())
 
-    plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, orientation='vertical', label='Number of P Phases')
+    colorbar = plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, orientation='vertical')
+    colorbar.set_label('Number of P Phases')
+    colorbar.ax.yaxis.set_label_position('left')  # between the map and the bar
     plt.title('Seismic stations used')
+
+    place_labels(ax, [(station, lon, lat, cmap(norm(p)))
+                      for (station, p), lon, lat in sorted(zip(shown_stations, lons, lats),
+                                                           key=lambda item: -item[0][1])])
     watermark()
     plt.savefig(output_map_path, dpi=400)
     plt.show()
