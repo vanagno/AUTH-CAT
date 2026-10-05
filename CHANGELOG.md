@@ -20,6 +20,11 @@ becomes the new version (see `RELEASING.md`).
   *Unreleased* entries under the new version and updating `CITATION.cff`.
 
 ### Changed
+- `authcat map`, `authcat sta`: full-resolution coastlines (GSHHG, about
+  100 m) instead of Natural Earth 1:10m. Those of Greece and its neighbours
+  ship with AUTH-CAT (0.9 MB); elsewhere cartopy downloads GSHHG once, and
+  without internet the maps fall back to Natural Earth. The station map's
+  borders are 1:10m too (they were 1:110m).
 - "Omori-Utsu" instead of "Modified Omori" in messages, captions and help.
 - `authcat sta`: station names take their triangle's colour and are placed
   so that they do not overlap (with a leader line when moved away);

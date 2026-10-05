@@ -55,6 +55,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import numpy as np
 import os
+from authcat.coastlines import Coastline
 from authcat.project import ask_file_name, open_project, shown, UTILITIES_DIR, watermark
 
 MARKER_SIZE = 100       # triangle area, points^2
@@ -142,8 +143,8 @@ def generate_stations_map(counts, station_coordinates, output_map_path):
 
     fig = plt.figure(figsize=(10, 5))
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
-    ax.add_feature(cfeature.COASTLINE.with_scale('10m'))
-    ax.add_feature(cfeature.BORDERS, linestyle=':')
+    ax.add_feature(Coastline(1))  # full-resolution GSHHG coastlines, see coastlines.py
+    ax.add_feature(cfeature.BORDERS.with_scale('10m'), linestyle=':')
 
     p_counts = np.array([phases['P'] for station, phases in counts.items() if phases['P'] >= threshold])
     norm = plt.Normalize(vmin=p_counts.min(), vmax=p_counts.max())

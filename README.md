@@ -75,7 +75,14 @@ stations take their most recent positions, and every station of the area
 (Greece and its neighbours, or the one given with `--region`) missing from the
 list is added; no station is removed. It rewrites `Utilities/regd.sta`,
 keeping the previous one as `Utilities/regd.sta.bak`.
-`authcat stup --dry-run` shows what would change. With an editable install
+`authcat stup --dry-run` shows what would change.
+
+The maps draw the full-resolution coastlines of GSHHG (Wessel & Smith, 1996;
+GNU LGPL). Those of Greece and its neighbours (lat 33.5-43.5, lon 18-31) are
+installed with AUTH-CAT (`Utilities/gshhg_f_*_greece.wkb.gz`); for a map
+reaching beyond them, cartopy downloads GSHHG once (about 150 MB), and without
+internet the maps fall back to Natural Earth 1:10m.
+`python -m authcat.coastlines` rebuilds the bundled extract. With an editable install
 (`pip install -e .`) this updates the repository's own copy, ready to commit;
 with a regular install, upgrading AUTH-CAT replaces it with the list of the new
 release.

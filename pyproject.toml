@@ -27,6 +27,7 @@ dependencies = [
     "matplotlib>=3.6",
     "scipy>=1.9",
     "cartopy>=0.21",
+    "shapely",
     "emcee>=3.0",
     "corner>=2.2",
     "reportlab>=3.6",
@@ -41,11 +42,11 @@ Repository = "https://github.com/vanagno/AUTH-CAT"
 authcat = "authcat.cli:main"
 
 [tool.setuptools]
-# Utilities/ holds data only (the station list and the report logo)
+# Utilities/ holds data only (the station list, the report logo and the coastlines)
 packages = ["authcat", "authcat.Utilities"]
 
 [tool.setuptools.dynamic]
 version = { attr = "authcat.__version__" }
 
 [tool.setuptools.package-data]
-"authcat.Utilities" = ["*.sta", "*.png"]
+"authcat.Utilities" = ["*.sta", "*.png", "*.wkb.gz"]
