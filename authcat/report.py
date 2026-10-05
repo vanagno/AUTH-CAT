@@ -418,7 +418,10 @@ def add_dataset_overview(
     story.append(
         Paragraph(
             "This section summarizes the catalogue information stored in the "
-            "AUTH-CAT analysis summary. Missing values are shown as '-'.",
+            "AUTH-CAT project record (/Projects/<Project name>/<Project name>.json). The project record contains " 
+            "the main metadata and analysis results generated during the AUTH-CAT workflow and is used to create this report." \
+            "The analyzed catalogue contains XXX earthquakes spanning XXX days, from XXXX to XXXX. Event magnitudes range " \
+            "from XXX to XXX, while focal depths range from approximately XXX to XXX km.",
             styles["body"],
         )
     )
@@ -454,11 +457,11 @@ def add_dataset_overview(
         ["Catalogue", fmt(project.get("catalogue_file"))],
         *download_rows(data.get("bulletin")),
         ["Number of events", fmt(cat.get("total_events"))],
-        ["Time period", time_period],
+    #    ["Time period", time_period],
         ["Catalogue duration", duration],
         ["Average event rate", rate],
         ["Largest event", largest_text],
-        ["Study area", coordinates],
+#        ["Study area", coordinates],
         ["Depth range", range_text(cat.get("depth_min_km"), cat.get("depth_max_km"), " km", 1)],
         ["Magnitude range", magnitude_range_text(cat.get("magnitude_min"), cat.get("magnitude_max"))],
     ]
