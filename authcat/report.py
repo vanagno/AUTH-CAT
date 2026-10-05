@@ -854,14 +854,14 @@ def add_omori(
         story,
         project_root,
         omori.get("figure"),
-        "Modified Omori Law fit.",
+        "Omori-Utsu law fit.",
         styles,
     )
     add_image(
         story,
         project_root,
         omori.get("mcmc_figure"),
-        "MCMC posterior distributions of the Modified Omori parameters "
+        "MCMC posterior distributions of the Omori-Utsu parameters "
         "(16th, 50th and 84th percentiles marked).",
         styles,
     )
@@ -878,7 +878,7 @@ def add_summary(
         ("Seismic network and phases", "station_phases"),
         ("Phase files", "phases"),
         ("Vp/Vs estimation", "wadati"),
-        ("Modified Omori Law", "modified_omori"),
+        ("Omori-Utsu Law", "modified_omori"),
     ]
 
     for label, key in mapping:

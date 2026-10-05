@@ -37,7 +37,7 @@ COMMANDS = [
     (("pha",), "phases", True, "Extract seismic phases from the bulletin"),
     (("pse",), "sel_phases", False, "Select only the phases from certain seismic stations"),
     (("vpvs",), "wadati", False, "Vp/Vs estimation through the Wadati method"),
-    (("ou",), "omori_utsu", False, "Estimation of the modified Omori law (MOL) parameters"),
+    (("ou",), "omori_utsu", False, "Estimation of the Omori-Utsu law parameters"),
     (("rep",), "report", True, "Generate the project report"),
     (("project",), "project", True,
      "List the projects, or start one from a bulletin you already have"),

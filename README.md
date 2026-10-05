@@ -41,7 +41,7 @@ options, where it has any.
 | `pha` | `phases.py` | Extract seismic phases from the bulletin |
 | `pse` | `sel_phases.py` | Select only the phases from certain seismic stations |
 | `vpvs` | `wadati.py` | Vp/Vs estimation through the Wadati method |
-| `ou` | `omori_utsu.py` | Estimation of the modified Omori law (MOL) parameters |
+| `ou` | `omori_utsu.py` | Estimation of the Omori-Utsu law parameters |
 | `rep` | `report.py` | Generate the project report |
 | `project` | `project.py` | List the projects, or start one from a bulletin you already have |
 
