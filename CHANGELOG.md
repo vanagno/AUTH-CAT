@@ -10,8 +10,24 @@ becomes the new version (see `RELEASING.md`).
 ## [Unreleased]
 
 ### Added
+- `authcat batch`: runs several steps on a project in one go, without
+  questions, saving the figures rather than showing them; the parameters
+  (e.g. the Mc, the Omori-Utsu start) are options.
+- `authcat rep`: the dataset overview gives the time period, the catalogue
+  duration (days), the average event rate (events/day) and the largest
+  event; the Mc section gives the window and filter of the Mc-over-time run.
 - This changelog. The release steps in `RELEASING.md` now include moving its
   *Unreleased* entries under the new version and updating `CITATION.cff`.
+
+### Changed
+- "Omori-Utsu" instead of "Modified Omori" in messages, captions and help.
+- `authcat sta`: station names take their triangle's colour and are placed
+  so that they do not overlap (with a leader line when moved away);
+  triangles are drawn above the coastlines, and the colourbar label sits
+  between the map and the bar.
+- `authcat rep`: dates read YYYY/MM/DD, ranges YYYY/MM/DD - YYYY/MM/DD; an
+  introduction to each section, a larger title page, and coordinates with
+  3 decimals and the ° sign.
 
 ### Fixed
 - `authcat mags` / `authcat rmag`: an event whose station magnitudes were all
