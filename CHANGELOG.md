@@ -26,10 +26,10 @@ becomes the new version (see `RELEASING.md`).
   without internet the maps fall back to Natural Earth. The station map's
   borders are 1:10m too (they were 1:110m).
 - "Omori-Utsu" instead of "Modified Omori" in messages, captions and help.
-- `authcat sta`: station names take their triangle's colour and are placed
-  so that they do not overlap (with a leader line when moved away);
-  triangles are drawn above the coastlines, and the colourbar label sits
-  between the map and the bar.
+- `authcat sta`: station names sit in dark ink on a light, slightly
+  transparent box, and are placed so that they do not overlap (with a
+  leader line when moved away); triangles are drawn above the coastlines,
+  and the colourbar label sits between the map and the bar.
 - `authcat rep`: dates read YYYY/MM/DD, ranges YYYY/MM/DD - YYYY/MM/DD; an
   introduction to each section, a larger title page, and coordinates with
   3 decimals and the ° sign.

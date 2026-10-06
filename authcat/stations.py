@@ -49,8 +49,6 @@ def write_output_file(counts, station_coordinates, output_file_path):
                 print(f"Warning: Coordinates for station {station} not found.")
 
 import matplotlib.pyplot as plt
-import matplotlib.patheffects as patheffects
-from matplotlib.text import Text
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import numpy as np
@@ -60,7 +58,12 @@ from authcat.project import ask_file_name, open_project, shown, UTILITIES_DIR, w
 
 MARKER_SIZE = 100       # triangle area, points^2
 LABEL_SIZE = 6          # station names, points
-LABEL_STEP = 7          # distance of a name from its triangle, points; tried at 1-4 steps
+LABEL_STEP = 7          # distance of a name from its triangle, points; tried at 1 to LABEL_RINGS steps
+LABEL_COLOUR = '0.1'    # names in near-black ink; the triangles carry the colour
+#: The light, slightly transparent box behind each name, which keeps it
+#: readable over coastlines and leader lines.
+LABEL_BOX = dict(boxstyle='round,pad=0.2', facecolor='white', edgecolor='0.6',
+                 linewidth=0.3, alpha=0.75)
 
 
 #: Directions tried around a triangle, in order of preference (degrees,
@@ -76,23 +79,16 @@ def _overlap(a, b):
     return max(0.0, min(a[2], b[2]) - max(a[0], b[0])) * max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
 
 
-def _outline(colour):
-    """A thin halo that keeps a name of this colour readable: white around
-    dark names, dark grey around light ones."""
-    r, g, b = colour[:3]
-    light = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.65
-    return [patheffects.withStroke(linewidth=1.0, foreground='0.25' if light else 'white')]
-
-
 def place_labels(ax, stations):
-    """Write each station name next to its triangle, in the triangle's colour.
+    """Write each station name next to its triangle, in dark ink on a light
+    box (LABEL_COLOUR, LABEL_BOX).
 
-    ``stations`` is a list of (name, lon, lat, colour), the most important
-    first. Each name takes the first spot around its triangle -- see
-    LABEL_DIRECTIONS, one to LABEL_RINGS steps away -- that stays on the map
-    and overlaps no triangle and no name already placed; when there is none,
-    the spot that overlaps least. A name placed away from its triangle gets a
-    thin leader line to it.
+    ``stations`` is a list of (name, lon, lat), the most important first.
+    Each name takes the first spot around its triangle -- see
+    LABEL_DIRECTIONS, one to LABEL_RINGS steps away -- where its box stays on
+    the map and overlaps no triangle and no name already placed; when there
+    is none, the spot that overlaps least. A name placed away from its
+    triangle gets a thin leader line to it.
     """
     fig = ax.figure
     fig.canvas.draw()  # fixes the map extent and the colourbar layout
@@ -100,7 +96,7 @@ def place_labels(ax, stations):
     frame = ax.get_window_extent(renderer)
     half = np.sqrt(MARKER_SIZE) / 2 * fig.dpi / 72
     occupied = []
-    for _, lon, lat, _ in stations:
+    for _, lon, lat in stations:
         x, y = ax.transData.transform((lon, lat))
         occupied.append((x - half, y - half, x + half, y + half))
 
@@ -108,22 +104,23 @@ def place_labels(ax, stations):
               ring * LABEL_STEP * np.sin(np.radians(angle)), ring)
              for ring in range(1, LABEL_RINGS + 1) for angle in LABEL_DIRECTIONS]
 
-    def label(name, lon, lat, colour, dx, dy, ring):
+    def label(name, lon, lat, dx, dy, ring):
         ha = 'center' if abs(dx) < 0.01 else ('left' if dx > 0 else 'right')
         va = 'center' if abs(dy) < 0.01 else ('bottom' if dy > 0 else 'top')
         leader = (dict(arrowstyle='-', color='0.3', linewidth=0.4, shrinkA=0, shrinkB=half * 72 / fig.dpi)
                   if ring > 1 else None)
         text = ax.annotate(name, (lon, lat), xytext=(dx, dy), textcoords='offset points',
-                           ha=ha, va=va, fontsize=LABEL_SIZE, color=colour, zorder=7,
-                           path_effects=_outline(colour), arrowprops=leader)
+                           ha=ha, va=va, fontsize=LABEL_SIZE, color=LABEL_COLOUR, zorder=7,
+                           bbox=LABEL_BOX, arrowprops=leader)
         text.update_positions(renderer)
-        box = Text.get_window_extent(text, renderer)  # the name only, not its leader line
+        text.update_bbox_position_size(renderer)
+        box = text.get_bbox_patch().get_window_extent(renderer)  # the name's box, not its leader line
         return text, (box.x0, box.y0, box.x1, box.y1)
 
-    for name, lon, lat, colour in stations:
+    for name, lon, lat in stations:
         best = None  # (overlap, spot) of the least crowded spot on the map
         for spot in spots:
-            text, box = label(name, lon, lat, colour, *spot)
+            text, box = label(name, lon, lat, *spot)
             text.remove()
             if not (frame.x0 <= box[0] and box[2] <= frame.x1
                     and frame.y0 <= box[1] and box[3] <= frame.y1):
@@ -133,7 +130,7 @@ def place_labels(ax, stations):
                 best = (crowding, spot)
             if crowding == 0:
                 break
-        text, box = label(name, lon, lat, colour, *(best[1] if best else spots[0]))
+        text, box = label(name, lon, lat, *(best[1] if best else spots[0]))
         occupied.append(box)
 
 
@@ -165,8 +162,8 @@ def generate_stations_map(counts, station_coordinates, output_map_path):
     colorbar.ax.yaxis.set_label_position('left')  # between the map and the bar
     plt.title('Seismic stations used')
 
-    place_labels(ax, [(station, lon, lat, cmap(norm(p)))
-                      for (station, p), lon, lat in sorted(zip(shown_stations, lons, lats),
+    place_labels(ax, [(station, lon, lat)
+                      for (station, _), lon, lat in sorted(zip(shown_stations, lons, lats),
                                                            key=lambda item: -item[0][1])])
     watermark()
     plt.savefig(output_map_path, dpi=400)
