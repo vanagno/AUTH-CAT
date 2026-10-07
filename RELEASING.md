@@ -68,8 +68,13 @@ repository, so no password or API token is stored anywhere.
   it and release the next version. A broken version can be *yanked* on PyPI
   (*Manage → Releases*), so pip no longer picks it unless asked for it by
   number.
-- **The tag must match `__version__`.** The workflow uploads the version
-  written in `authcat/__init__.py`, whatever the tag says.
+- **The tag must match `__version__`.** The workflow checks this and stops
+  before building when they differ; otherwise PyPI would refuse the upload of
+  a version it already has.
+- **A release whose run failed** (e.g. that check): fix the cause on `main`,
+  then on GitHub delete the release and its tag (*Releases*, then *Tags*) and
+  publish the release again with the same tag. Re-running the failed run is
+  not enough: it builds the commit the old tag points to.
 - **Publishing makes the code public.** Whatever the repository's visibility,
   anyone can `pip install authcat` and read the source. The package holds
   `authcat/` with its station list and logo (and, in the source archive,

@@ -9,6 +9,8 @@ becomes the new version (see `RELEASING.md`).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-07
+
 ### Added
 - `authcat batch`: runs several steps on a project in one go, without
   questions, saving the figures rather than showing them; the parameters
@@ -111,6 +113,7 @@ First release on PyPI (`pip install authcat`).
 - `authcat vpvs`: the Wadati diagram is saved, as reported.
 - Compatibility with pandas 3.
 
-[Unreleased]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.1...v0.1.5
 [0.1.1]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/vanagno/AUTH-CAT/releases/tag/v0.1.0
