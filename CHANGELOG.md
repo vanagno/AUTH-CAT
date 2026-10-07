@@ -9,11 +9,11 @@ becomes the new version (see `RELEASING.md`).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-07
+
 ### Changed
 - `authcat map`: the magnitude legend is back to 10 pt; with the larger
   figure text of 0.1.5 its box covered epicentres.
-
-## [0.1.6] - 2026-10-07
 
 ### Fixed
 - `authcat ou`: the decay plot's log axes read 0.01, 0.1, 1, 10 instead of
