@@ -54,5 +54,27 @@ def use_figure_style() -> None:
             "mathtext.rm": FONT_FAMILY,
             "mathtext.it": f"{FONT_FAMILY}:italic",
             "mathtext.bf": f"{FONT_FAMILY}:bold",
+            # not used, but without it mathtext looks for a 'cursive' font
+            "mathtext.cal": FONT_FAMILY,
         })
     mpl.rcParams.update(rc)
+
+
+def plain_log_ticks(ax) -> None:
+    """Label the log axes of ``ax`` with plain numbers (0.01, 0.1, 1, 10)
+    instead of powers of ten: an exponent such as 10⁻¹ is written in the
+    figure font, which may lack the minus sign (U+2212) it needs."""
+    import numpy as np
+    from matplotlib.ticker import LogFormatter
+
+    class PlainLogFormatter(LogFormatter):
+        # matplotlib still picks which ticks get a label; only the text changes
+        def __call__(self, x, pos=None):
+            if not super().__call__(x, pos):
+                return ""
+            return np.format_float_positional(float(f"{x:.6g}"), trim="-")
+
+    for axis in (ax.xaxis, ax.yaxis):
+        if axis.get_scale() == "log":
+            axis.set_major_formatter(PlainLogFormatter())
+            axis.set_minor_formatter(PlainLogFormatter(labelOnlyBase=False))

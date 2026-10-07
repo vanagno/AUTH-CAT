@@ -52,7 +52,7 @@ except ImportError as exc:
     ) from exc
 
 from authcat.project import ask_file_name, open_project, shown, watermark
-from authcat.style import use_figure_style
+from authcat.style import plain_log_ticks, use_figure_style
 use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 
@@ -627,6 +627,7 @@ def make_decay_plot(
 
     ax.set_xscale("log")
     ax.set_yscale("log")
+    plain_log_ticks(ax)
     ax.set_xlabel("Days after sequence start")
     ax.set_ylabel("# events/day")
     ax.set_title("Aftershock Decay")
