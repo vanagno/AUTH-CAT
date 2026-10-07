@@ -11,6 +11,13 @@ becomes the new version (see `RELEASING.md`).
 
 ## [0.1.6] - 2026-10-07
 
+### Changed
+- `authcat map`: the magnitude legend is back to 10 pt; with the larger
+  figure text of 0.1.5 its box covered epicentres.
+- `authcat mc`: the notes inside the plots (Mc, b-value, GFT90% and GFT95%)
+  and the legends are 10 pt too.
+- `authcat vpvs`: the Wadati diagram has no grid lines.
+
 ### Fixed
 - `authcat ou`: the decay plot's log axes read 0.01, 0.1, 1, 10 instead of
   powers of ten, whose minus sign (as in 10⁻¹) Tw Cen MT lacks; matplotlib
