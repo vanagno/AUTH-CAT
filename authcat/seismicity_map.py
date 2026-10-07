@@ -6,6 +6,8 @@ import numpy as np
 import os
 from authcat.coastlines import Coastline
 from authcat.project import ask_file_name, open_project, shown, watermark
+from authcat.style import use_figure_style
+use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 def read_earthquake_catalog(file_path):
     """

@@ -20,6 +20,11 @@ becomes the new version (see `RELEASING.md`).
   *Unreleased* entries under the new version and updating `CITATION.cff`.
 
 ### Changed
+- Figures: larger text, saved at 300 dpi (they were 100 to 400 dpi), and
+  Mc written with a subscript c. Figures and report use the Tw Cen MT font
+  when it is installed (`AUTHCAT_FONT` names another); in the report too, Mc
+  has a subscript c. In the magnitudes chart, the station names stand upright
+  and are sized so that they do not overlap.
 - `authcat map`, `authcat sta`: full-resolution coastlines (GSHHG, about
   100 m) instead of Natural Earth 1:10m. Those of Greece and its neighbours
   ship with AUTH-CAT (0.9 MB); elsewhere cartopy downloads GSHHG once, and

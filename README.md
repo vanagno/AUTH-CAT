@@ -82,7 +82,13 @@ GNU LGPL). Those of Greece and its neighbours (lat 33.5-43.5, lon 18-31) are
 installed with AUTH-CAT (`Utilities/gshhg_f_*_greece.wkb.gz`); for a map
 reaching beyond them, cartopy downloads GSHHG once (about 150 MB), and without
 internet the maps fall back to Natural Earth 1:10m.
-`python -m authcat.coastlines` rebuilds the bundled extract. With an editable install
+`python -m authcat.coastlines` rebuilds the bundled extract.
+
+Figures are saved at 300 dpi. Figures and report use the Tw Cen MT font when
+it is installed (it comes with Microsoft Office; its licence does not allow
+shipping it with AUTH-CAT); without it they keep matplotlib's DejaVu Sans and
+Times. The `AUTHCAT_FONT` environment variable names another installed font to
+use instead, e.g. `AUTHCAT_FONT="Liberation Sans"`. With an editable install
 (`pip install -e .`) this updates the repository's own copy, ready to commit;
 with a regular install, upgrading AUTH-CAT replaces it with the list of the new
 release.

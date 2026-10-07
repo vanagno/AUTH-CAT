@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
@@ -34,6 +35,65 @@ except ImportError as exc:
     ) from exc
 
 from authcat.project import UTILITIES_DIR, open_project, shown
+from authcat.style import font_files
+
+# The report's fonts: the figures' font (Tw Cen MT, see style.py) when it is
+# installed, Times otherwise.
+FALLBACK_FONTS = {"regular": "Times-Roman", "bold": "Times-Bold", "italic": "Times-Italic",
+                  "bolditalic": "Times-BoldItalic"}
+
+
+def register_fonts() -> dict[str, str]:
+    """Register the installed font's files with ReportLab and return their
+    names, or FALLBACK_FONTS when it is not installed or cannot be read."""
+    files = font_files()
+    if not files:
+        return dict(FALLBACK_FONTS)
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    names = {}
+    try:
+        for key, path in files.items():
+            names[key] = f"AuthcatFont-{key}"
+            pdfmetrics.registerFont(TTFont(names[key], path))
+    except Exception:  # e.g. a font file ReportLab cannot read
+        return dict(FALLBACK_FONTS)
+    names.setdefault("bold", names["regular"])
+    names.setdefault("italic", names["regular"])
+    names.setdefault("bolditalic", names["bold"])
+    # so that <b> and <i> in a paragraph take the font's own bold and italic
+    pdfmetrics.registerFontFamily(names["regular"], normal=names["regular"], bold=names["bold"],
+                                  italic=names["italic"], boldItalic=names["bolditalic"])
+    return names
+
+
+FONTS = register_fonts()
+FONT, FONT_BOLD, FONT_ITALIC = FONTS["regular"], FONTS["bold"], FONTS["italic"]
+
+
+def fallback_glyphs(text: str) -> str:
+    """Draw in Times the characters the report's font lacks (e.g. ≤), so
+    they do not come out as empty boxes."""
+    if FONT == FALLBACK_FONTS["regular"]:
+        return text
+    from reportlab.pdfbase import pdfmetrics
+    known = pdfmetrics.getFont(FONT).face.charToGlyph
+    return "".join(f'<font name="{FALLBACK_FONTS["regular"]}">{ch}</font>'
+                   if ord(ch) > 127 and ord(ch) not in known else ch for ch in text)
+
+
+_MC = re.compile(r"\bMc\b")
+
+
+def mc_subscript(text: str) -> str:
+    """Mc with a subscript c, in paragraph markup."""
+    return _MC.sub("M<sub>c</sub>", text)
+
+
+def markup(value: Any) -> str:
+    """Plain text made ready for a Paragraph: escaped, Mc with a subscript c,
+    and any character the font lacks drawn in Times."""
+    return fallback_glyphs(mc_subscript(escape(str(value))))
 
 
 DEFAULT_REPORT_DIR = Path("Reports")
@@ -214,7 +274,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "title": ParagraphStyle(
             "ReportTitle",
             parent=sample["Title"],
-            fontName="Times-Bold",
+            fontName=FONT_BOLD,
             fontSize=25,
             leading=26,
             alignment=TA_CENTER,
@@ -224,7 +284,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "subtitle": ParagraphStyle(
             "ReportSubtitle",
             parent=sample["Normal"],
-            fontName="Times-Roman",
+            fontName=FONT,
             fontSize=14.5,
             leading=15,
             alignment=TA_CENTER,
@@ -234,7 +294,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "section": ParagraphStyle(
             "SectionHeading",
             parent=sample["Heading2"],
-            fontName="Times-Bold",
+            fontName=FONT_BOLD,
             fontSize=15,
             leading=18,
             textColor=colors.HexColor("#2F4858"),
@@ -245,7 +305,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "subsection": ParagraphStyle(
             "SubsectionHeading",
             parent=sample["Heading3"],
-            fontName="Times-Bold",
+            fontName=FONT_BOLD,
             fontSize=11.5,
             leading=14,
             textColor=colors.HexColor("#37474F"),
@@ -256,7 +316,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "body": ParagraphStyle(
             "BodyTextCustom",
             parent=sample["BodyText"],
-            fontName="Times-Roman",
+            fontName=FONT,
             fontSize=9.6,
             leading=14,
             textColor=colors.HexColor("#202124"),
@@ -265,7 +325,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "caption": ParagraphStyle(
             "FigureCaption",
             parent=sample["Normal"],
-            fontName="Times-Italic",
+            fontName=FONT_ITALIC,
             fontSize=8.4,
             leading=11,
             alignment=TA_CENTER,
@@ -276,7 +336,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "small": ParagraphStyle(
             "SmallText",
             parent=sample["Normal"],
-            fontName="Times-Roman",
+            fontName=FONT,
             fontSize=8,
             leading=10,
             textColor=colors.HexColor("#616161"),
@@ -287,7 +347,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
 def make_table(rows: list[list[Any]], widths: list[float] | None = None) -> Table:
     body_style = ParagraphStyle(
         "TableBody",
-        fontName="Times-Roman",
+        fontName=FONT,
         fontSize=8.8,
         leading=11,
         textColor=colors.HexColor("#202124"),
@@ -295,7 +355,7 @@ def make_table(rows: list[list[Any]], widths: list[float] | None = None) -> Tabl
     label_style = ParagraphStyle(
         "TableLabel",
         parent=body_style,
-        fontName="Times-Bold",
+        fontName=FONT_BOLD,
     )
 
     formatted_rows = []
@@ -306,7 +366,7 @@ def make_table(rows: list[list[Any]], widths: list[float] | None = None) -> Tabl
                 formatted.append(cell)
             else:
                 style = label_style if col_index == 0 else body_style
-                formatted.append(Paragraph(escape(str(cell)), style))
+                formatted.append(Paragraph(markup(cell), style))
         formatted_rows.append(formatted)
 
     table = Table(formatted_rows, colWidths=widths, hAlign="LEFT", repeatRows=0)
@@ -327,12 +387,16 @@ def make_table(rows: list[list[Any]], widths: list[float] | None = None) -> Tabl
 
 
 def make_header_table(rows: list[list[Any]], widths: list[float] | None = None) -> Table:
+    header_style = ParagraphStyle("TableHeader", fontName=FONT_BOLD, fontSize=8.5, leading=10.5)
+    cell_style = ParagraphStyle("TableCell", fontName=FONT, fontSize=8.5, leading=10.5)
+    rows = [[cell if hasattr(cell, "wrap") else Paragraph(markup(cell), header_style if i == 0 else cell_style)
+             for cell in row] for i, row in enumerate(rows)]
     table = Table(rows, colWidths=widths, hAlign="LEFT", repeatRows=1)
     table.setStyle(
         TableStyle(
             [
-                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                ("FONTNAME", (0, 0), (-1, 0), FONT_BOLD),
+                ("FONTNAME", (0, 1), (-1, -1), FONT),
                 ("FONTSIZE", (0, 0), (-1, -1), 8.5),
                 ("LEADING", (0, 0), (-1, -1), 10.5),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
@@ -593,10 +657,10 @@ def add_mc(
                         f"{mc_time['filter_length']} events.")
     story.append(
         Paragraph(
-            "Magnitude of completeness (Mc) represents the lowest magnitude above which the earthquake catalogue is considered reliably complete. "
+            mc_subscript("Magnitude of completeness (Mc) represents the lowest magnitude above which the earthquake catalogue is considered reliably complete. "
             "AUTH-CAT estimates Mc using the MAXC, GFT and MBS methods and reports the corresponding Gutenberg-Richter b-values and their uncertainties."
             + mc_time_text +
-            " Further information on the implemented methods is provided in Section 3.5 of the manual.",
+            " Further information on the implemented methods is provided in Section 3.5 of the manual."),
             styles["body"],
         )
     )
@@ -977,7 +1041,7 @@ def draw_page_decor(canvas, doc, project_name: str) -> None:
     canvas.setLineWidth(0.4)
     canvas.line(LEFT_MARGIN, 1.25 * cm, PAGE_WIDTH - RIGHT_MARGIN, 1.25 * cm)
 
-    canvas.setFont("Times-Roman", 7.5)
+    canvas.setFont(FONT, 7.5)
     canvas.setFillColor(colors.HexColor("#777777"))
     canvas.drawString(LEFT_MARGIN, 0.85 * cm, f"AUTH-CAT - {project_name}")
     canvas.drawRightString(

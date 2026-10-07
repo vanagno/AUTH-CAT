@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from authcat.project import ask_file_name, open_project, shown, watermark
+from authcat.style import MC, use_figure_style
+use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 COLUMNS = ['Year', 'Stamp', 'Latitude', 'Longitude', 'Depth', 'Magnitude']
 
@@ -62,9 +64,9 @@ def calculate_cumulative_earthquakes(file_path, mc=None, figures_dir='Figures'):
     ax1.set_ylabel('Cumulative Count')
     
     ax2.plot(filtered_df['Days'], filtered_df['Cumulative Count Above Mc'], marker='o',linestyle='', color='red')
-    ax2.set_title(f'Cumulative Number of Earthquakes Above Mc ({mc}) Over Time')
+    ax2.set_title(f'Cumulative Number of Earthquakes Above {MC} ({mc}) Over Time')
     ax2.set_xlabel('Days Since Start of Catalog')
-    ax2.set_ylabel(f'Cumulative Count Above Mc ({mc})')
+    ax2.set_ylabel(f'Cumulative Count Above {MC} ({mc})')
     
     directory = figures_dir
     output_file = os.path.join(directory, 'cumulative_earthquakes.png')

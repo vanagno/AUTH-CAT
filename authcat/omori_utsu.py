@@ -52,6 +52,8 @@ except ImportError as exc:
     ) from exc
 
 from authcat.project import ask_file_name, open_project, shown, watermark
+from authcat.style import use_figure_style
+use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 
 META = {
@@ -631,7 +633,7 @@ def make_decay_plot(
     ax.legend()
     fig.tight_layout()
     watermark(fig)
-    fig.savefig(output_path, dpi=150)
+    fig.savefig(output_path)
 
     return bin_loc, occ_dens, fit_values
 
@@ -646,7 +648,7 @@ def make_corner_plot(flat_samples: np.ndarray, output_path: Path) -> None:
     )
     fig.tight_layout()
     watermark(fig)
-    fig.savefig(output_path, dpi=150)
+    fig.savefig(output_path)
 
 
 def save_fit_data(

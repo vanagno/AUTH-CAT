@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import numpy as np
 from authcat.project import ask_file_name, open_project, shown, watermark
+from authcat.style import use_figure_style
+use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 FLAG_COLOR = 'purple'
 
@@ -153,11 +155,14 @@ def plot_station_data(station_counts, median_residuals, output_file, residual_th
     ax2.bar(stations, counts, edgecolor='black',
             color=[FLAG_COLOR if station in flagged else 'royalblue' for station in stations])
     ax2.set_ylabel('Number of Observations')
-    plt.xticks(rotation=45)
+    # One upright name per bar, no larger than the space a bar has, so that
+    # neighbouring names never run into each other
+    bar_width_pt = ax2.get_position().width * fig.get_figwidth() * 72 / max(len(stations), 1)
+    plt.xticks(rotation=90, fontsize=min(plt.rcParams['font.size'], bar_width_pt / 1.3))
     plt.tight_layout()
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     watermark()
-    plt.savefig(output_file, dpi=400) 
+    plt.savefig(output_file) 
     plt.show()
     print(f"Median residual magnitudes plot saved to {shown(output_file)}")
     if flagged:
@@ -292,14 +297,14 @@ def plot_bland_altman(modified_path, output_file):
     # Lines labelled at their right-hand end rather than in a legend
     for level, text in ((upper, f'+1.96 SD: {upper:+.3f}'), (bias, f'Mean: {bias:+.3f}'),
                         (lower, f'-1.96 SD: {lower:+.3f}')):
-        ax.text(1.01, level, text, transform=ax.get_yaxis_transform(), va='center', ha='left', fontsize=9)
+        ax.text(1.01, level, text, transform=ax.get_yaxis_transform(), va='center', ha='left', fontsize='small')
     ax.set_title(f'Bland-Altman plot: original vs recomputed magnitudes ({len(diffs)} events)')
     ax.set_xlabel('Mean of original and recomputed magnitude')
     ax.set_ylabel('Recomputed - original magnitude')
     plt.tight_layout()
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     watermark()
-    plt.savefig(output_file, dpi=400)
+    plt.savefig(output_file)
     plt.show()
     print(f"Bland-Altman plot saved to {shown(output_file)}")
     return {

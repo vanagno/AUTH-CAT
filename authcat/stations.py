@@ -55,9 +55,11 @@ import numpy as np
 import os
 from authcat.coastlines import Coastline
 from authcat.project import ask_file_name, open_project, shown, UTILITIES_DIR, watermark
+from authcat.style import use_figure_style
+use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 MARKER_SIZE = 100       # triangle area, points^2
-LABEL_SIZE = 6          # station names, points
+LABEL_SIZE = 8          # station names, points
 LABEL_STEP = 7          # distance of a name from its triangle, points; tried at 1 to LABEL_RINGS steps
 LABEL_COLOUR = '0.1'    # names in near-black ink; the triangles carry the colour
 #: The light, slightly transparent box behind each name, which keeps it
@@ -166,7 +168,7 @@ def generate_stations_map(counts, station_coordinates, output_map_path):
                       for (station, _), lon, lat in sorted(zip(shown_stations, lons, lats),
                                                            key=lambda item: -item[0][1])])
     watermark()
-    plt.savefig(output_map_path, dpi=400)
+    plt.savefig(output_map_path)
     plt.show()
     print(f"Map of the seismic stations used is saved to {shown(output_map_path)}")
 
