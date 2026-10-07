@@ -36,7 +36,7 @@ def update_catalog_with_modified_magnitudes(catalog_path, modified_magnitudes_pa
                         kept += 1
                 formatted_line = f"{parts[0]} {parts[1]} "
                 formatted_line += f"{float(parts[2]):6.4f} {float(parts[3]):6.4f} "
-                formatted_line += f"{float(parts[4]):5.2f} {parts[5]:>5s} "
+                formatted_line += f"{float(parts[4]):5.2f} {parts[5]:>4s} "
                 formatted_line += f"{float(parts[6]):4.2f} {float(parts[7]):6.2f} "
                 formatted_line += f"{int(parts[8]):3d} {int(parts[9]):3d} "
                 formatted_line += f"{parts[10]}\n"

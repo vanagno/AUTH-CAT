@@ -15,6 +15,9 @@ becomes the new version (see `RELEASING.md`).
   having an unparsable date or time; 7 of the 1331 events of the 2021
   Arkalochori sequence, 4 of them in the first half hour after the
   mainshock, were lost this way.
+- `authcat rmag`: the magnitude column of `<name>_cat_mod.txt` is 4
+  characters wide, as in `<name>_cat.txt`; it was 5, which shifted the
+  columns after it out from under the header.
 
 ## [0.1.6] - 2026-10-07
 
