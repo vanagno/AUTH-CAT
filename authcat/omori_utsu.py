@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AUTH-CAT Modified Omori Law analysis.
+AUTH-CAT Omori-Utsu law analysis.
 
 Workflow
 --------
@@ -14,7 +14,7 @@ Workflow
    and its end (press Enter for the end of the catalogue).
 3. Optionally filter events using a magnitude threshold (Mc).
 4. Convert event times to days relative to the selected start.
-5. Estimate Modified Omori parameters with the Bayesian fitting routine
+5. Estimate Omori-Utsu parameters with the Bayesian fitting routine
    (bayes_logL / bayes_getK below).
 6. Run MCMC to estimate parameter uncertainty.
 7. Save, in the project folder (see project.py):
@@ -52,6 +52,8 @@ except ImportError as exc:
     ) from exc
 
 from authcat.project import ask_file_name, open_project, shown, watermark
+from authcat.style import use_figure_style
+use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 
 META = {
@@ -70,12 +72,12 @@ META = {
 
 
 # -----------------------------------------------------------------------------
-# Modified Omori law and its Bayesian likelihood (formerly omori_utils.py)
+# Omori-Utsu (modified Omori) law and its Bayesian likelihood (formerly omori_utils.py)
 # -----------------------------------------------------------------------------
 
 
 def omori(x, params):
-    """Modified Omori rate K / (x + c)^p, with params = [c, K, p]."""
+    """Omori-Utsu rate K / (x + c)^p, with params = [c, K, p]."""
     c, K, p = params
     return K/((x+c)**p)
 
@@ -407,7 +409,7 @@ def fit_bayesian(otimes: np.ndarray) -> np.ndarray:
 
     if not fit.success:
         raise RuntimeError(
-            "Bayesian Modified Omori optimization failed: "
+            "Bayesian Omori-Utsu optimization failed: "
             f"{fit.message}"
         )
 
@@ -631,7 +633,7 @@ def make_decay_plot(
     ax.legend()
     fig.tight_layout()
     watermark(fig)
-    fig.savefig(output_path, dpi=150)
+    fig.savefig(output_path)
 
     return bin_loc, occ_dens, fit_values
 
@@ -646,7 +648,7 @@ def make_corner_plot(flat_samples: np.ndarray, output_path: Path) -> None:
     )
     fig.tight_layout()
     watermark(fig)
-    fig.savefig(output_path, dpi=150)
+    fig.savefig(output_path)
 
 
 def save_fit_data(
@@ -729,7 +731,7 @@ def main() -> None:
     except Exception as exc:
         raise SystemExit(f"Error: {exc}") from exc
 
-    print("\nModified Omori analysis selection:")
+    print("\nOmori-Utsu analysis selection:")
     print(f"  Start mode:   {start_mode}")
     print(f"  Start time:   {start_time}")
     if end_time is None:
@@ -746,7 +748,7 @@ def main() -> None:
         f"{otimes[-1]:.6g} days"
     )
 
-    print("\nEstimating Bayesian Modified Omori parameters...")
+    print("\nEstimating Bayesian Omori-Utsu parameters...")
 
     try:
         bayes_params = fit_bayesian(otimes)
@@ -755,7 +757,7 @@ def main() -> None:
 
     c_fit, K_fit, p_fit = bayes_params
 
-    print("\nBayesian Modified Omori parameters:")
+    print("\nBayesian Omori-Utsu parameters:")
     print(f"  K = {K_fit:.6g}")
     print(f"  c = {c_fit:.6g}")
     print(f"  p = {p_fit:.6g}")
@@ -797,7 +799,7 @@ def main() -> None:
     print_mcmc_summary(percentiles)
 
     print("\nOutputs:")
-    print(f"  Modified Omori plot: {shown(omori_figure)}")
+    print(f"  Omori-Utsu plot:     {shown(omori_figure)}")
     print(f"  MCMC corner plot:    {shown(mcmc_figure)}")
     print(f"  Fit data:            {shown(fit_data_file)}")
 

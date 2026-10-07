@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import convolve
 from authcat.project import ask_file_name, open_project, shown, watermark
+from authcat.style import MC, use_figure_style
+use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 def read_catalog(file_path):
     df = pd.read_csv(file_path, sep=r"\s+", skiprows=1, 
@@ -25,8 +27,8 @@ def compute_mc(magnitudes, window_length, step=1):
 
 def plot_mc(times, mc_values, filtered_mc_values, output_file):
     plt.figure(figsize=(12, 6))
-    plt.plot(times, mc_values, color='gray', label='Raw Mc')
-    plt.plot(times, filtered_mc_values, color='blue', linewidth=2, label='Filtered Mc')
+    plt.plot(times, mc_values, color='gray', label='Raw ' + MC)
+    plt.plot(times, filtered_mc_values, color='blue', linewidth=2, label='Filtered ' + MC)
     plt.title('Time Variation of Magnitude of Completeness')
     plt.xlabel('Date')
     plt.ylabel('Magnitude of Completeness (MAXC)')

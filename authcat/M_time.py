@@ -3,6 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from authcat.project import ask_file_name, open_project, shown, watermark
+from authcat.style import use_figure_style
+use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 
 def read_catalog(file_path):

@@ -2,6 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 from authcat.project import ask_file_name, open_project, shown, watermark
+from authcat.style import use_figure_style
+use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 proj = open_project()
 input_folder = proj.results_dir
@@ -23,7 +25,7 @@ def add_stats_annotation(ax, data, color):
     median_val = data.median()
     textstr = f'Mean: {mean_val:.2f}\nMedian: {median_val:.2f}'
     # Place text in the top right corner
-    ax.text(0.95, 0.95, textstr, transform=ax.transAxes, fontsize=9,
+    ax.text(0.95, 0.95, textstr, transform=ax.transAxes, fontsize='small',
             verticalalignment='top', horizontalalignment='right',
             color=color, bbox=dict(facecolor='white', alpha=0.5))
 
@@ -33,7 +35,7 @@ axs[0, 0].set_title('Depths (km)')
 add_stats_annotation(axs[0, 0], df['Depth'], 'black')
 #----- Histogram for Magnitudes -------#
 axs[0, 1].hist(df['M'], bins=20, color='orange', edgecolor='black')
-axs[0, 1].set_title('Magnitudes (ML)')
+axs[0, 1].set_title('Magnitudes $(M_{L})$')
 add_stats_annotation(axs[0, 1], df['M'], 'black')
 #----- Histogram for RMS --------------#
 axs[1, 0].hist(df['RMS'], bins=20, color='green', edgecolor='black')

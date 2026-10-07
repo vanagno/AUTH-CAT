@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
@@ -34,6 +35,65 @@ except ImportError as exc:
     ) from exc
 
 from authcat.project import UTILITIES_DIR, open_project, shown
+from authcat.style import font_files
+
+# The report's fonts: the figures' font (Tw Cen MT, see style.py) when it is
+# installed, Times otherwise.
+FALLBACK_FONTS = {"regular": "Times-Roman", "bold": "Times-Bold", "italic": "Times-Italic",
+                  "bolditalic": "Times-BoldItalic"}
+
+
+def register_fonts() -> dict[str, str]:
+    """Register the installed font's files with ReportLab and return their
+    names, or FALLBACK_FONTS when it is not installed or cannot be read."""
+    files = font_files()
+    if not files:
+        return dict(FALLBACK_FONTS)
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    names = {}
+    try:
+        for key, path in files.items():
+            names[key] = f"AuthcatFont-{key}"
+            pdfmetrics.registerFont(TTFont(names[key], path))
+    except Exception:  # e.g. a font file ReportLab cannot read
+        return dict(FALLBACK_FONTS)
+    names.setdefault("bold", names["regular"])
+    names.setdefault("italic", names["regular"])
+    names.setdefault("bolditalic", names["bold"])
+    # so that <b> and <i> in a paragraph take the font's own bold and italic
+    pdfmetrics.registerFontFamily(names["regular"], normal=names["regular"], bold=names["bold"],
+                                  italic=names["italic"], boldItalic=names["bolditalic"])
+    return names
+
+
+FONTS = register_fonts()
+FONT, FONT_BOLD, FONT_ITALIC = FONTS["regular"], FONTS["bold"], FONTS["italic"]
+
+
+def fallback_glyphs(text: str) -> str:
+    """Draw in Times the characters the report's font lacks (e.g. ≤), so
+    they do not come out as empty boxes."""
+    if FONT == FALLBACK_FONTS["regular"]:
+        return text
+    from reportlab.pdfbase import pdfmetrics
+    known = pdfmetrics.getFont(FONT).face.charToGlyph
+    return "".join(f'<font name="{FALLBACK_FONTS["regular"]}">{ch}</font>'
+                   if ord(ch) > 127 and ord(ch) not in known else ch for ch in text)
+
+
+_MC = re.compile(r"\bMc\b")
+
+
+def mc_subscript(text: str) -> str:
+    """Mc with a subscript c, in paragraph markup."""
+    return _MC.sub("M<sub>c</sub>", text)
+
+
+def markup(value: Any) -> str:
+    """Plain text made ready for a Paragraph: escaped, Mc with a subscript c,
+    and any character the font lacks drawn in Times."""
+    return fallback_glyphs(mc_subscript(escape(str(value))))
 
 
 DEFAULT_REPORT_DIR = Path("Reports")
@@ -74,6 +134,16 @@ def safe_get(data: dict[str, Any], *keys: str, default: Any = None) -> Any:
     return current
 
 
+def last_run_details(data: dict[str, Any], script: str) -> dict[str, Any]:
+    """The inputs and parameters of the latest run of ``script`` in the
+    record's history, e.g. the window and filter lengths of Mc_time.py."""
+    for entry in reversed(data.get("history") or []):
+        if isinstance(entry, dict) and entry.get("script") == script:
+            details = entry.get("details")
+            return details if isinstance(details, dict) else {}
+    return {}
+
+
 def is_available(section: Any) -> bool:
     return isinstance(section, dict) and section.get("available", False) is True
 
@@ -92,18 +162,41 @@ def fmt(value: Any, decimals: int | None = None) -> str:
     return str(value)
 
 
+def parse_datetime(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
 def fmt_datetime(value: Any) -> str:
+    """A date and time as YYYY/MM/DD HH:MM:SS(.fff)."""
     if not value:
         return "-"
 
-    text = str(value)
-    try:
-        dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
-        if dt.microsecond:
-            return dt.strftime("%Y-%m-%d %H:%M:%S.%f").rstrip("0").rstrip(".")
-        return dt.strftime("%Y-%m-%d %H:%M:%S")
-    except ValueError:
-        return text
+    dt = parse_datetime(value)
+    if dt is None:
+        return str(value)
+    if dt.microsecond:
+        return dt.strftime("%Y/%m/%d %H:%M:%S.%f").rstrip("0").rstrip(".")
+    return dt.strftime("%Y/%m/%d %H:%M:%S")
+
+
+def fmt_date(value: Any) -> str:
+    """A date as YYYY/MM/DD."""
+    if not value:
+        return "-"
+    dt = parse_datetime(value)
+    return dt.strftime("%Y/%m/%d") if dt else str(value)
+
+
+def date_range(start: Any, end: Any) -> str:
+    """Two dates as YYYY/MM/DD - YYYY/MM/DD."""
+    if not start and not end:
+        return "-"
+    return f"{fmt_date(start)} - {fmt_date(end)}"
 
 
 def range_text(
@@ -148,13 +241,13 @@ def download_rows(bulletin: Any) -> list[list[Any]]:
     bounds = bulletin.get("bounds")
     if isinstance(bounds, dict):
         area = (
-            f"Lat: {range_text(bounds.get('latitude_min'), bounds.get('latitude_max'), ' deg', 2)}; "
-            f"Lon: {range_text(bounds.get('longitude_min'), bounds.get('longitude_max'), ' deg', 2)}"
+            f"Lat: {range_text(bounds.get('latitude_min'),  bounds.get('latitude_max'), ' °', 3)}; "
+            f"Lon: {range_text(bounds.get('longitude_min'), bounds.get('longitude_max'), ' °', 3)}"
         )
     else:
         area = "No geographic limits"
     return [
-        ["Download period", range_text(bulletin.get("start_date"), bulletin.get("end_date"))],
+        ["Download period", date_range(bulletin.get("start_date"), bulletin.get("end_date"))],
         ["Download area", area],
     ]
 
@@ -181,8 +274,8 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "title": ParagraphStyle(
             "ReportTitle",
             parent=sample["Title"],
-            fontName="Times-Bold",
-            fontSize=22,
+            fontName=FONT_BOLD,
+            fontSize=25,
             leading=26,
             alignment=TA_CENTER,
             spaceAfter=10,
@@ -191,8 +284,8 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "subtitle": ParagraphStyle(
             "ReportSubtitle",
             parent=sample["Normal"],
-            fontName="Times-Roman",
-            fontSize=10.5,
+            fontName=FONT,
+            fontSize=14.5,
             leading=15,
             alignment=TA_CENTER,
             textColor=colors.HexColor("#616161"),
@@ -201,7 +294,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "section": ParagraphStyle(
             "SectionHeading",
             parent=sample["Heading2"],
-            fontName="Times-Bold",
+            fontName=FONT_BOLD,
             fontSize=15,
             leading=18,
             textColor=colors.HexColor("#2F4858"),
@@ -212,7 +305,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "subsection": ParagraphStyle(
             "SubsectionHeading",
             parent=sample["Heading3"],
-            fontName="Times-Bold",
+            fontName=FONT_BOLD,
             fontSize=11.5,
             leading=14,
             textColor=colors.HexColor("#37474F"),
@@ -223,7 +316,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "body": ParagraphStyle(
             "BodyTextCustom",
             parent=sample["BodyText"],
-            fontName="Times-Roman",
+            fontName=FONT,
             fontSize=9.6,
             leading=14,
             textColor=colors.HexColor("#202124"),
@@ -232,7 +325,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "caption": ParagraphStyle(
             "FigureCaption",
             parent=sample["Normal"],
-            fontName="Times-Italic",
+            fontName=FONT_ITALIC,
             fontSize=8.4,
             leading=11,
             alignment=TA_CENTER,
@@ -243,7 +336,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
         "small": ParagraphStyle(
             "SmallText",
             parent=sample["Normal"],
-            fontName="Times-Roman",
+            fontName=FONT,
             fontSize=8,
             leading=10,
             textColor=colors.HexColor("#616161"),
@@ -254,7 +347,7 @@ def build_styles() -> dict[str, ParagraphStyle]:
 def make_table(rows: list[list[Any]], widths: list[float] | None = None) -> Table:
     body_style = ParagraphStyle(
         "TableBody",
-        fontName="Times-Roman",
+        fontName=FONT,
         fontSize=8.8,
         leading=11,
         textColor=colors.HexColor("#202124"),
@@ -262,7 +355,7 @@ def make_table(rows: list[list[Any]], widths: list[float] | None = None) -> Tabl
     label_style = ParagraphStyle(
         "TableLabel",
         parent=body_style,
-        fontName="Times-Bold",
+        fontName=FONT_BOLD,
     )
 
     formatted_rows = []
@@ -273,7 +366,7 @@ def make_table(rows: list[list[Any]], widths: list[float] | None = None) -> Tabl
                 formatted.append(cell)
             else:
                 style = label_style if col_index == 0 else body_style
-                formatted.append(Paragraph(escape(str(cell)), style))
+                formatted.append(Paragraph(markup(cell), style))
         formatted_rows.append(formatted)
 
     table = Table(formatted_rows, colWidths=widths, hAlign="LEFT", repeatRows=0)
@@ -294,12 +387,16 @@ def make_table(rows: list[list[Any]], widths: list[float] | None = None) -> Tabl
 
 
 def make_header_table(rows: list[list[Any]], widths: list[float] | None = None) -> Table:
+    header_style = ParagraphStyle("TableHeader", fontName=FONT_BOLD, fontSize=8.5, leading=10.5)
+    cell_style = ParagraphStyle("TableCell", fontName=FONT, fontSize=8.5, leading=10.5)
+    rows = [[cell if hasattr(cell, "wrap") else Paragraph(markup(cell), header_style if i == 0 else cell_style)
+             for cell in row] for i, row in enumerate(rows)]
     table = Table(rows, colWidths=widths, hAlign="LEFT", repeatRows=1)
     table.setStyle(
         TableStyle(
             [
-                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                ("FONTNAME", (0, 0), (-1, 0), FONT_BOLD),
+                ("FONTNAME", (0, 1), (-1, -1), FONT),
                 ("FONTSIZE", (0, 0), (-1, -1), 8.5),
                 ("LEADING", (0, 0), (-1, -1), 10.5),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
@@ -382,26 +479,45 @@ def add_dataset_overview(
         project = {}
 
     add_section_heading(story, "Dataset overview", styles)
-    story.append(
-        Paragraph(
-            "This section summarizes the catalogue information stored in the "
-            "AUTH-CAT analysis summary. Missing values are shown as '-'.",
-            styles["body"],
-        )
-    )
 
-    start_time = fmt_datetime(cat.get("start_time"))
-    end_time = fmt_datetime(cat.get("end_time"))
-    if start_time == "-" and end_time == "-":
-        time_period = "-"
+    time_period = date_range(cat.get("start_time"), cat.get("end_time"))
+    start, end = parse_datetime(cat.get("start_time")), parse_datetime(cat.get("end_time"))
+    days = (end - start).total_seconds() / 86400 if start and end and end > start else None
+    duration = rate = "-"
+    if days:
+        duration = f"{fmt(days, 1)} days"
+        if isinstance(cat.get("total_events"), int):
+            per_day = cat["total_events"] / days
+            rate = f"{fmt(per_day, 2 if per_day < 10 else 1)} events/day"
+    largest = cat.get("largest_event") or {}
+    if largest.get("magnitude") is not None:
+        largest_text = f"M {fmt(largest['magnitude'], 2)} on {fmt_datetime(largest.get('time'))}"
     else:
-        time_period = f"{start_time} - {end_time}"
+        largest_text = "-"
+
+    # The introduction, with this catalogue's own numbers; a sentence whose
+    # values are not recorded is left out.
+    name = project.get("name")
+    record = f"Projects/{escape(str(name))}/{escape(str(name))}.json" if name else "the project folder"
+    intro = (
+        "This section summarizes the catalogue information stored in the "
+        f"AUTH-CAT project record ({record}). The project record contains "
+        "the main metadata and analysis results generated during the AUTH-CAT workflow and is used to create this report."
+    )
+    if isinstance(cat.get("total_events"), int) and days:
+        intro += (f" The analyzed catalogue contains {cat['total_events']} earthquakes spanning "
+                  f"{fmt(days, 1)} days, from {fmt_date(start)} to {fmt_date(end)}.")
+    limits = [cat.get(key) for key in ("magnitude_min", "magnitude_max", "depth_min_km", "depth_max_km")]
+    if all(value is not None for value in limits):
+        intro += (f" Event magnitudes range from {fmt(limits[0], 1)} to {fmt(limits[1], 1)}, while "
+                  f"focal depths range from approximately {fmt(limits[2], 1)} to {fmt(limits[3], 1)} km.")
+    story.append(Paragraph(intro, styles["body"]))
 
     latitude_range = range_text(
-        cat.get("latitude_min"), cat.get("latitude_max"), " deg", 2
+        cat.get("latitude_min"),  cat.get("latitude_max"), "°", 3
     )
     longitude_range = range_text(
-        cat.get("longitude_min"), cat.get("longitude_max"), " deg", 2
+        cat.get("longitude_min"), cat.get("longitude_max"), "°", 3
     )
     if latitude_range == "-" and longitude_range == "-":
         coordinates = "-"
@@ -413,9 +529,12 @@ def add_dataset_overview(
         ["Catalogue", fmt(project.get("catalogue_file"))],
         *download_rows(data.get("bulletin")),
         ["Number of events", fmt(cat.get("total_events"))],
-        ["Time period", time_period],
-        ["Study area", coordinates],
-        ["Depth range", range_text(cat.get("depth_min_km"), cat.get("depth_max_km"), " km", 2)],
+    #    ["Time period", time_period],
+        ["Catalogue duration", duration],
+        ["Average event rate", rate],
+        ["Largest event", largest_text],
+#        ["Study area", coordinates],
+        ["Depth range", range_text(cat.get("depth_min_km"), cat.get("depth_max_km"), " km", 1)],
         ["Magnitude range", magnitude_range_text(cat.get("magnitude_min"), cat.get("magnitude_max"))],
     ]
     story.append(make_table(overview_rows, [5.2 * cm, CONTENT_WIDTH - 5.2 * cm]))
@@ -435,8 +554,11 @@ def add_spatial_distribution(
     add_section_heading(story, "Spatial distribution", styles)
     story.append(
         Paragraph(
-            "The epicentral map shows the spatial distribution of the events "
-            "included in the catalogue.",
+            "This section presents the epicentral distribution "
+            "of the earthquakes included in the catalogue. Epicenters are shown according"
+            " to their geographical coordinates, with symbol size and color representing "
+            "their magnitude. This map provides a first-order view of the spatial extent of "
+            "seismicity and possible clustering of events.",
             styles["body"],
         )
     )
@@ -463,8 +585,11 @@ def add_catalogue_characteristics(
     add_section_heading(story, "Catalogue characteristics", styles)
     story.append(
         Paragraph(
-            "The catalogue histograms summarize parameters such as magnitude, "
-            "focal depth, RMS and azimuthal gap, depending on the generated figure.",
+            "This section summarizes the main characteristics of the earthquake catalogue "
+            "through the histograms of focal depth, magnitude, RMS residual and azimuthal gap. These parameters "
+            "provide an initial description of the dataset and help assess the quality and "
+            "consistency of the earthquake locations. Mean and median values are "
+            "reported for each parameter, allowing the typical values and variability of the distributions to be assessed.",
             styles["body"],
         )
     )
@@ -503,8 +628,8 @@ def add_temporal_evolution(
     add_section_heading(story, "Temporal evolution", styles)
     story.append(
         Paragraph(
-            "These figures summarize the temporal development of the earthquake "
-            "sequence using the outputs generated by AUTH-CAT.",
+            "This section summarizes the temporal evolution of the analyzed seismicity. The magnitude-time plot shows how earthquake "
+            "magnitudes vary throughout the analyzed period, while the cumulative number - time plots highlight changes in the rate of seismic activity.",
             styles["body"],
         )
     )
@@ -524,10 +649,18 @@ def add_mc(
         return
 
     add_section_heading(story, "Magnitude of completeness", styles)
+    mc_time = last_run_details(data, "Mc_time.py")
+    mc_time_text = ""
+    if mc_time.get("window_length") and mc_time.get("filter_length"):
+        mc_time_text = (" The temporal variation of Mc was evaluated using a moving window of "
+                        f"{mc_time['window_length']} events and a smoothing filter of "
+                        f"{mc_time['filter_length']} events.")
     story.append(
         Paragraph(
-            "Magnitude of completeness (Mc) and Gutenberg-Richter b-values are "
-            "reported for the methods stored in the analysis summary.",
+            mc_subscript("Magnitude of completeness (Mc) represents the lowest magnitude above which the earthquake catalogue is considered reliably complete. "
+            "AUTH-CAT estimates Mc using the MAXC, GFT and MBS methods and reports the corresponding Gutenberg-Richter b-values and their uncertainties."
+            + mc_time_text +
+            " Further information on the implemented methods is provided in Section 3.5 of the manual."),
             styles["body"],
         )
     )
@@ -606,7 +739,16 @@ def add_magnitude_analysis(
         flagged_text = "-"
     else:
         flagged_text = ", ".join(str(s) for s in flagged) if flagged else "None"
-
+    
+    story.append(
+        Paragraph(
+            "Magnitude analysis evaluates the consistency of station-based magnitude estimates by comparing the median residual" 
+            " of each seismic station with the corresponding event magnitudes. Stations exceeding the selected absolute residual" 
+            " threshold are flagged and may be excluded from the magnitude recomputation. The effect of the exclusion is then assessed" 
+            " by comparing the original and recomputed event magnitudes. ",
+            styles["body"],
+        )
+    )
     story.append(
         make_table(
             [
@@ -759,7 +901,13 @@ def add_wadati(
     vpvs = wadati.get("vp_vs", {})
     if not isinstance(vpvs, dict):
         vpvs = {}
-
+    story.append(
+        Paragraph(
+            "The Vp/Vs ratio is estimated from P- and S-wave travel times using the Wadati method. " 
+            "AUTH-CAT applies both least-squares fitting and orthogonal regression, allowing the resulting estimates to be compared." ,
+            styles["body"],
+        )
+    )
     rows = [
         ["Vp/Vs - least squares", fmt(vpvs.get("least_squares"))],
         ["Vp/Vs - orthogonal regression", fmt(vpvs.get("orthogonal_regression"))],
@@ -786,7 +934,7 @@ OMORI_BOUND_LABELS = {
 
 
 def sequence_bound(time_value: Any, mode: Any) -> str:
-    """A sequence start or end, e.g. '2021-03-03 10:16:08.367 (largest earthquake)'."""
+    """A sequence start or end, e.g. '2021/03/03 10:16:08.367 (largest earthquake)'."""
     text = fmt_datetime(time_value)
     if mode in OMORI_BOUND_LABELS:
         return f"{text} ({OMORI_BOUND_LABELS[mode]})" if text != "-" else OMORI_BOUND_LABELS[mode]
@@ -803,13 +951,13 @@ def add_omori(
     if not is_available(omori):
         return
 
-    add_section_heading(story, "Modified Omori Law", styles)
+    add_section_heading(story, "Omori-Utsu Law", styles)
 
     threshold = omori.get("magnitude_threshold")
     rows = [
         ["Sequence start", sequence_bound(omori.get("start_time"), omori.get("fit_start"))],
         ["Sequence end", sequence_bound(omori.get("end_time"), omori.get("fit_end"))],
-        ["Magnitude threshold (Mc)", f"M ≥ {fmt(threshold)}" if threshold is not None else "All events"],
+        ["Magnitude threshold (Mc)", f" {fmt(threshold)}" if threshold is not None else "All events"],
         ["Events used", fmt(omori.get("events"))],
     ]
     story.append(make_table(rows, [5.0 * cm, CONTENT_WIDTH - 5.0 * cm]))
@@ -831,14 +979,14 @@ def add_omori(
         story,
         project_root,
         omori.get("figure"),
-        "Modified Omori Law fit.",
+        "Omori-Utsu law fit.",
         styles,
     )
     add_image(
         story,
         project_root,
         omori.get("mcmc_figure"),
-        "MCMC posterior distributions of the Modified Omori parameters "
+        "MCMC posterior distributions of the Omori-Utsu parameters "
         "(16th, 50th and 84th percentiles marked).",
         styles,
     )
@@ -855,7 +1003,7 @@ def add_summary(
         ("Seismic network and phases", "station_phases"),
         ("Phase files", "phases"),
         ("Vp/Vs estimation", "wadati"),
-        ("Modified Omori Law", "modified_omori"),
+        ("Omori-Utsu Law", "modified_omori"),
     ]
 
     for label, key in mapping:
@@ -893,7 +1041,7 @@ def draw_page_decor(canvas, doc, project_name: str) -> None:
     canvas.setLineWidth(0.4)
     canvas.line(LEFT_MARGIN, 1.25 * cm, PAGE_WIDTH - RIGHT_MARGIN, 1.25 * cm)
 
-    canvas.setFont("Times-Roman", 7.5)
+    canvas.setFont(FONT, 7.5)
     canvas.setFillColor(colors.HexColor("#777777"))
     canvas.drawString(LEFT_MARGIN, 0.85 * cm, f"AUTH-CAT - {project_name}")
     canvas.drawRightString(
@@ -928,11 +1076,13 @@ def build_pdf(data: dict[str, Any], project_root: Path, output_path: Path) -> No
     # Dedicated cover page.
     # LOGO.png is expected in the Utilities folder next to report.py.
     story.append(Spacer(1, 2.0 * cm))
+    story.append(Paragraph("Analysis Report", styles["title"]))
+    story.append(Spacer(1, 1.0 * cm))
 
     logo_path = UTILITIES_DIR / "LOGO.png"
     if logo_path.exists() and logo_path.is_file():
         try:
-            logo = scaled_image_to_fit(logo_path, 9.0 * cm, 6.5 * cm)
+            logo = scaled_image_to_fit(logo_path, 13.0 * cm, 8.5 * cm)
             logo.hAlign = "CENTER"
             story.append(logo)
             story.append(Spacer(1, 1.0 * cm))
@@ -941,11 +1091,11 @@ def build_pdf(data: dict[str, Any], project_root: Path, output_path: Path) -> No
     else:
         print(f"Warning: logo not found: {logo_path}")
 
-    story.append(Paragraph("AUTH-CAT Analysis Report", styles["title"]))
+    
     story.append(
         Paragraph(
             f"Project: {project_name}<br/>"
-            f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            f"Generated: {datetime.now().strftime('%Y/%m/%d %H:%M')}",
             styles["subtitle"],
         )
     )

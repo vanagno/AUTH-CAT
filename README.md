@@ -36,8 +36,9 @@ options, where it has any.
 | `pha` | `phases.py` | Extract seismic phases from the bulletin |
 | `pse` | `sel_phases.py` | Select only the phases from certain seismic stations |
 | `vpvs` | `wadati.py` | Vp/Vs estimation through the Wadati method |
-| `ou` | `omori_utsu.py` | Estimation of the modified Omori law (MOL) parameters |
+| `ou` | `omori_utsu.py` | Estimation of the Omori-Utsu law parameters |
 | `rep` | `report.py` | Generate the project report |
+| `batch` | `batch.py` | Run several steps on a project in one go, without questions |
 | `project` | `project.py` | List the projects, or start one from a bulletin you already have |
 
 `python -m authcat <command>` works the same way, and the script names work as
@@ -69,7 +70,20 @@ stations take their most recent positions, and every station of the area
 (Greece and its neighbours, or the one given with `--region`) missing from the
 list is added; no station is removed. It rewrites `Utilities/regd.sta`,
 keeping the previous one as `Utilities/regd.sta.bak`.
-`authcat stup --dry-run` shows what would change. With an editable install
+`authcat stup --dry-run` shows what would change.
+
+The maps draw the full-resolution coastlines of GSHHG (Wessel & Smith, 1996;
+GNU LGPL). Those of Greece and its neighbours (lat 33.5-43.5, lon 18-31) are
+installed with AUTH-CAT (`Utilities/gshhg_f_*_greece.wkb.gz`); for a map
+reaching beyond them, cartopy downloads GSHHG once (about 150 MB), and without
+internet the maps fall back to Natural Earth 1:10m.
+`python -m authcat.coastlines` rebuilds the bundled extract.
+
+Figures are saved at 300 dpi. Figures and report use the Tw Cen MT font when
+it is installed (it comes with Microsoft Office; its licence does not allow
+shipping it with AUTH-CAT); without it they keep matplotlib's DejaVu Sans and
+Times. The `AUTHCAT_FONT` environment variable names another installed font to
+use instead, e.g. `AUTHCAT_FONT="Liberation Sans"`. With an editable install
 (`pip install -e .`) this updates the repository's own copy, ready to commit;
 with a regular install, upgrading AUTH-CAT replaces it with the list of the new
 release.
@@ -96,7 +110,22 @@ release.
    accept `-p/--project`. When a command asks for a bulletin, catalogue or
    phase list, pressing Enter takes the project's own file (e.g. `Tyrnavos.bul`, `Tyrnavos_cat.txt`).
 
-3. Build the PDF report of everything recorded so far:
+3. Or run the routine steps in one go, without questions -- figures are saved
+   rather than shown:
+
+   ```
+   authcat batch Arkal                      # cat map hist mt mc nt mct mags sta pha vpvs ou rep
+   authcat batch Arkal -s cat map hist mc   # only some steps
+   authcat batch Arkal --mc 2.5 --omori-start "2021-09-27 06:17:21"
+   ```
+
+   The Mc for `nt` defaults to the one found by `mc` (`--mc-method`), `ou`
+   starts at the largest earthquake, and `mags` only plots the residuals: the
+   steps that need judgement (recomputing magnitudes with `mags` and `rmag`,
+   choosing the stations in `pse`) are best run one by one.
+   `authcat batch -h` lists all options.
+
+4. Build the PDF report of everything recorded so far:
 
    ```
    authcat rep                    # asks which project

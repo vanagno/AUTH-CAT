@@ -4,6 +4,8 @@ from datetime import datetime
 from scipy.odr import Model, ODR, RealData
 import os
 from authcat.project import ask_file_name, open_project, shown, watermark
+from authcat.style import use_figure_style
+use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 def parse_earthquake_data(bulletin_text):
     lines = bulletin_text.strip().split('\n')
@@ -110,7 +112,7 @@ def plot_travel_times(p_travel_times, sp_diff_times, output_file):
     plt.plot(x_fit, y_odr, "g--", label=f'Orthogonal: y = {beta[0]:.3f}x + {beta[1]:.3f}')
 
     textstr = f'Vp/Vs (LS): {1+slope:.2f}\nVp/Vs (OR): {1+beta[0]:.2f}'
-    plt.text(0.95, 0.05, textstr, fontsize=12, verticalalignment='bottom', horizontalalignment='right', transform=plt.gca().transAxes, bbox=dict(facecolor='white', alpha=0.5))
+    plt.text(0.95, 0.05, textstr, fontsize='medium', verticalalignment='bottom', horizontalalignment='right', transform=plt.gca().transAxes, bbox=dict(facecolor='white', alpha=0.5))
 
     plt.title('P Travel Times vs S-P Travel Times')
     plt.xlabel('P Travel Time (seconds)')

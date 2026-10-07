@@ -4,7 +4,10 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import numpy as np
 import os
+from authcat.coastlines import Coastline
 from authcat.project import ask_file_name, open_project, shown, watermark
+from authcat.style import use_figure_style
+use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 def read_earthquake_catalog(file_path):
     """
@@ -29,11 +32,10 @@ def plot_earthquakes_final_rounded_ticks(latitudes, longitudes, magnitudes, outp
     ax = plt.axes(projection=ccrs.Mercator())
     ax.set_extent([min(longitudes)-0.2, max(longitudes)+0.2, min(latitudes)-0.2, max(latitudes)+0.2],
                   crs=ccrs.PlateCarree())
-    # Natural Earth 1:10m, the closest match to basemap's 'h' resolution
+    # Full-resolution GSHHG coastlines (see coastlines.py): land, then lakes
     ax.set_facecolor('powderblue')
-    ax.add_feature(cfeature.LAND.with_scale('10m'), facecolor='lightgray')
-    ax.add_feature(cfeature.LAKES.with_scale('10m'), facecolor='powderblue')
-    ax.add_feature(cfeature.COASTLINE.with_scale('10m'), linewidth=1.0)
+    ax.add_feature(Coastline(1, facecolor='lightgray', edgecolor='black', linewidth=1.0))
+    ax.add_feature(Coastline(2, facecolor='powderblue', edgecolor='none'))
     ax.add_feature(cfeature.BORDERS.with_scale('10m'), linewidth=0.5)
     
     earthquakes = sorted(zip(latitudes, longitudes, magnitudes), key=lambda x: x[2])

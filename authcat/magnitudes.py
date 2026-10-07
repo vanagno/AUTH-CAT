@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import numpy as np
 from authcat.project import ask_file_name, open_project, shown, watermark
+from authcat.style import use_figure_style
+use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 FLAG_COLOR = 'purple'
 
@@ -139,6 +141,7 @@ def plot_station_data(station_counts, median_residuals, output_file, residual_th
         flagged = [station for station in stations if abs(median_residuals[station]) > residual_threshold]
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+    plt.rcParams['axes.unicode_minus'] = False
     ax1.bar(stations, medians, edgecolor='black',
             color=[FLAG_COLOR if station in flagged else 'violet' for station in stations])
     ax1.set_title('Median Residual (Event Mag - Station Mag)')
@@ -153,11 +156,14 @@ def plot_station_data(station_counts, median_residuals, output_file, residual_th
     ax2.bar(stations, counts, edgecolor='black',
             color=[FLAG_COLOR if station in flagged else 'royalblue' for station in stations])
     ax2.set_ylabel('Number of Observations')
-    plt.xticks(rotation=45)
+    # One upright name per bar, no larger than the space a bar has, so that
+    # neighbouring names never run into each other
+    bar_width_pt = ax2.get_position().width * fig.get_figwidth() * 72 / max(len(stations), 1)
+    plt.xticks(rotation=60, fontsize=min(plt.rcParams['font.size'], bar_width_pt / 1.3))
     plt.tight_layout()
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     watermark()
-    plt.savefig(output_file, dpi=400) 
+    plt.savefig(output_file) 
     plt.show()
     print(f"Median residual magnitudes plot saved to {shown(output_file)}")
     if flagged:
@@ -208,15 +214,24 @@ def compute_and_append_mean_magnitudes(directory, filename):
         current_event_id = None
         current_event_magnitude = None
         event_line_index = None
+        # Events with no station magnitude left get nan: authcat rmag keeps
+        # their original magnitude, and the Bland-Altman plot leaves them out.
+        no_station_left = 0
+
+        def event_line():
+            nonlocal no_station_left
+            if temp_magnitudes:
+                return f"{current_event_id}    {current_event_magnitude}    {np.mean(temp_magnitudes):.2f}\n"
+            no_station_left += 1
+            return f"{current_event_id}    {current_event_magnitude}    nan\n"
 
         for i, line in enumerate(lines):
-            if line.strip(): 
+            if line.strip():
                 parts = line.split()
-                if len(parts) == 2 and parts[0].startswith('auth'): 
+                if len(parts) == 2 and parts[0].startswith('auth'):
                     if current_event_id is not None:
-                        mean_magnitude = np.mean(temp_magnitudes)
-                        new_lines[event_line_index] = f"{current_event_id}    {current_event_magnitude}    {mean_magnitude:.2f}\n"
-                        temp_magnitudes = []  
+                        new_lines[event_line_index] = event_line()
+                        temp_magnitudes = []
                     current_event_id = parts[0]
                     current_event_magnitude = parts[1]
                     event_line_index = len(new_lines) 
@@ -226,14 +241,16 @@ def compute_and_append_mean_magnitudes(directory, filename):
                         temp_magnitudes.append(float(parts[1]))
                     new_lines.append(line) 
 
-        if current_event_id is not None and temp_magnitudes:
-            mean_magnitude = np.mean(temp_magnitudes)
-            new_lines[event_line_index] = f"{current_event_id}    {current_event_magnitude}    {mean_magnitude:.2f}\n"
+        if current_event_id is not None:
+            new_lines[event_line_index] = event_line()
 
         with open(full_path, 'w') as file:
             file.writelines(new_lines)
 
         print("Mean magnitudes computed and appended to the file.")
+        if no_station_left:
+            print(f"{no_station_left} events have no station magnitude left; "
+                  "they keep their original magnitude")
     except Exception as e:
         print(f"Failed to process the file: {e}")
 
@@ -281,14 +298,14 @@ def plot_bland_altman(modified_path, output_file):
     # Lines labelled at their right-hand end rather than in a legend
     for level, text in ((upper, f'+1.96 SD: {upper:+.3f}'), (bias, f'Mean: {bias:+.3f}'),
                         (lower, f'-1.96 SD: {lower:+.3f}')):
-        ax.text(1.01, level, text, transform=ax.get_yaxis_transform(), va='center', ha='left', fontsize=9)
+        ax.text(1.01, level, text, transform=ax.get_yaxis_transform(), va='center', ha='left', fontsize='small')
     ax.set_title(f'Bland-Altman plot: original vs recomputed magnitudes ({len(diffs)} events)')
     ax.set_xlabel('Mean of original and recomputed magnitude')
     ax.set_ylabel('Recomputed - original magnitude')
     plt.tight_layout()
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     watermark()
-    plt.savefig(output_file, dpi=400)
+    plt.savefig(output_file)
     plt.show()
     print(f"Bland-Altman plot saved to {shown(output_file)}")
     return {
@@ -323,7 +340,7 @@ def user_interaction(directory, flagged=()):
         bland_altman = None
         if input("Do you want to compute mean magnitudes for each event? (yes/no): ").lower() == 'yes':
             compute_and_append_mean_magnitudes(directory, "modified_magnitudes.txt")
-            print(f"New mean magnidutes were computed and written to {shown(os.path.join(directory, 'modified_magnitudes.txt'))}")
+            print(f"New mean magnitudes were computed and written to {shown(os.path.join(directory, 'modified_magnitudes.txt'))}")
             bland_altman = plot_bland_altman(os.path.join(directory, "modified_magnitudes.txt"),
                                              os.path.join(directory, "bland_altman.png"))
         return stations_to_eliminate, bland_altman

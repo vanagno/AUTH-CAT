@@ -39,7 +39,10 @@ repository, so no password or API token is stored anywhere.
    an editable install (`pip install -e .`), run `authcat stup --dry-run`,
    then `authcat stup`, and commit `authcat/Utilities/regd.sta`.
 2. Set the new version in `authcat/__init__.py`, e.g.
-   `__version__ = "0.1.1"`; `pyproject.toml` takes it from there.
+   `__version__ = "0.1.1"`; `pyproject.toml` takes it from there. In
+   `CHANGELOG.md`, turn *Unreleased* into the new version with today's date,
+   start an empty *Unreleased* above it, and update the comparison links at
+   the bottom. In `CITATION.cff`, set `version` and `date-released`.
 3. Check that the package builds and installs:
 
    ```

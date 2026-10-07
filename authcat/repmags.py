@@ -22,13 +22,18 @@ def update_catalog_with_modified_magnitudes(catalog_path, modified_magnitudes_pa
 
         new_catalog = []
         updated = 0
+        kept = 0
         for line in catalog_lines:
             parts = line.split()
             if len(parts) == 11 and parts[10].startswith('auth'):
                 event_id = parts[10]
                 if event_id in modified_magnitudes:
-                    parts[5] = f"{modified_magnitudes[event_id]:4.2f}"
-                    updated += 1
+                    if np.isfinite(modified_magnitudes[event_id]):
+                        parts[5] = f"{modified_magnitudes[event_id]:4.2f}"
+                        updated += 1
+                    else:
+                        # no station magnitude left: the original one stays
+                        kept += 1
                 formatted_line = f"{parts[0]} {parts[1]} "
                 formatted_line += f"{float(parts[2]):6.4f} {float(parts[3]):6.4f} "
                 formatted_line += f"{float(parts[4]):5.2f} {parts[5]:>5s} "
@@ -43,6 +48,8 @@ def update_catalog_with_modified_magnitudes(catalog_path, modified_magnitudes_pa
             file.writelines(new_catalog)
 
         print("Catalog has been updated with modified magnitudes and saved to", shown(output_path))
+        if kept:
+            print(f"{kept} events had no station magnitude left and keep their original magnitude")
 #        print ("You can now run transform.py if you prefer the 6-column format")
         return updated
     except Exception as e:
