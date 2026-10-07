@@ -9,6 +9,8 @@ becomes the new version (see `RELEASING.md`).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-07
+
 ### Fixed
 - `authcat ou`: the decay plot's log axes read 0.01, 0.1, 1, 10 instead of
   powers of ten, whose minus sign (as in 10⁻¹) Tw Cen MT lacks; matplotlib
@@ -118,7 +120,8 @@ First release on PyPI (`pip install authcat`).
 - `authcat vpvs`: the Wadati diagram is saved, as reported.
 - Compatibility with pandas 3.
 
-[Unreleased]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.1...v0.1.5
 [0.1.1]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/vanagno/AUTH-CAT/releases/tag/v0.1.0
