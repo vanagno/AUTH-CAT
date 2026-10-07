@@ -83,7 +83,9 @@ def plot_earthquakes_final_rounded_ticks(latitudes, longitudes, magnitudes, outp
     grid.top_labels = False
     grid.right_labels = False
     
-    plt.legend(handles=legend_patches, loc='upper left', title='Magnitudes')
+    # 10 pt, as before the larger figure text: a bigger box hides epicentres
+    plt.legend(handles=legend_patches, loc='upper left', title='Magnitudes',
+               fontsize=10, title_fontsize=10)
     plt.title('Earthquake Locations')
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     watermark()

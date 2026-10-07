@@ -9,6 +9,10 @@ becomes the new version (see `RELEASING.md`).
 
 ## [Unreleased]
 
+### Changed
+- `authcat map`: the magnitude legend is back to 10 pt; with the larger
+  figure text of 0.1.5 its box covered epicentres.
+
 ## [0.1.6] - 2026-10-07
 
 ### Fixed
