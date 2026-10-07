@@ -1,12 +1,4 @@
 """The look shared by AUTH-CAT's figures and PDF report.
-
-* Font: Tw Cen MT, when it is installed (it comes with Microsoft Office; its
-  licence does not allow shipping it with AUTH-CAT). Without it, the figures
-  keep matplotlib's DejaVu Sans and the report Times. The AUTHCAT_FONT
-  environment variable names another installed font to use instead.
-* Figures: larger text (FONT_SIZE) and FIGURE_DPI when saved.
-* MC: Mc with a subscript c, for figure text.
-
 Plotting scripts call :func:`use_figure_style` before they draw.
 """
 
@@ -46,8 +38,7 @@ def font_files() -> dict[str, str]:
 
 
 def use_figure_style() -> None:
-    """Set matplotlib up for AUTH-CAT's figures: the font, larger text, and
-    FIGURE_DPI when saving."""
+
     import matplotlib as mpl
 
     rc = {
