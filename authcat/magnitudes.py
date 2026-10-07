@@ -141,6 +141,7 @@ def plot_station_data(station_counts, median_residuals, output_file, residual_th
         flagged = [station for station in stations if abs(median_residuals[station]) > residual_threshold]
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+    plt.rcParams['axes.unicode_minus'] = False
     ax1.bar(stations, medians, edgecolor='black',
             color=[FLAG_COLOR if station in flagged else 'violet' for station in stations])
     ax1.set_title('Median Residual (Event Mag - Station Mag)')
@@ -158,7 +159,7 @@ def plot_station_data(station_counts, median_residuals, output_file, residual_th
     # One upright name per bar, no larger than the space a bar has, so that
     # neighbouring names never run into each other
     bar_width_pt = ax2.get_position().width * fig.get_figwidth() * 72 / max(len(stations), 1)
-    plt.xticks(rotation=90, fontsize=min(plt.rcParams['font.size'], bar_width_pt / 1.3))
+    plt.xticks(rotation=60, fontsize=min(plt.rcParams['font.size'], bar_width_pt / 1.3))
     plt.tight_layout()
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     watermark()
