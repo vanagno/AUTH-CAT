@@ -6,7 +6,7 @@ import numpy as np
 import os
 from authcat.coastlines import Coastline
 from authcat.project import ask_file_name, open_project, shown, watermark
-from authcat.style import use_figure_style
+from authcat.style import INSET_SIZE, use_figure_style
 use_figure_style()  # font, text size and 300 dpi shared by all figures
 
 def read_earthquake_catalog(file_path):
@@ -83,9 +83,9 @@ def plot_earthquakes_final_rounded_ticks(latitudes, longitudes, magnitudes, outp
     grid.top_labels = False
     grid.right_labels = False
     
-    # 10 pt, as before the larger figure text: a bigger box hides epicentres
+    # small, as before the larger figure text: a bigger box hides epicentres
     plt.legend(handles=legend_patches, loc='upper left', title='Magnitudes',
-               fontsize=10, title_fontsize=10)
+               fontsize=INSET_SIZE, title_fontsize=INSET_SIZE)
     plt.title('Earthquake Locations')
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     watermark()

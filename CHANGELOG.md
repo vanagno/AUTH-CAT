@@ -14,6 +14,8 @@ becomes the new version (see `RELEASING.md`).
 ### Changed
 - `authcat map`: the magnitude legend is back to 10 pt; with the larger
   figure text of 0.1.5 its box covered epicentres.
+- `authcat mc`: the notes inside the plots (Mc, b-value, GFT90% and GFT95%)
+  and the legend of the MBS plot are 10 pt too.
 
 ### Fixed
 - `authcat ou`: the decay plot's log axes read 0.01, 0.1, 1, 10 instead of
