@@ -9,6 +9,13 @@ becomes the new version (see `RELEASING.md`).
 
 ## [Unreleased]
 
+### Fixed
+- `authcat cat`: an event whose origin time is given with its uncertainty
+  (e.g. `11:29:52.756   +/-    0.378 s`) was left out of the catalogues as
+  having an unparsable date or time; 7 of the 1331 events of the 2021
+  Arkalochori sequence, 4 of them in the first half hour after the
+  mainshock, were lost this way.
+
 ## [0.1.6] - 2026-10-07
 
 ### Changed

@@ -515,6 +515,10 @@ def read_bulletin(path: str | os.PathLike) -> tuple[list[Event], ReadReport]:
                     origin_creation = value
                 elif key == "Public ID" and section == "origin":
                     pass  # the origin's own id; taken from Preferred Origin ID
+                elif key == "Time":
+                    # some origins give the time with its uncertainty:
+                    # "11:29:52.756   +/-    0.378 s"
+                    cur.setdefault(f"{section}:{key}", value.split("+/-")[0].strip())
                 else:
                     cur.setdefault(f"{section}:{key}", value)
 
