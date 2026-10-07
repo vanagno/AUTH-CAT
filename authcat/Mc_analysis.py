@@ -45,7 +45,7 @@ plt.yscale('log')
 plt.xlabel('Magnitude')
 plt.ylabel('Frequency')
 plt.title('FMD plot')
-plt.legend(loc="upper right")
+plt.legend(loc="upper right", fontsize=INSET_SIZE)
 directory = proj.figures_dir
 output_file = os.path.join(directory,'FMD_plot.png')
 os.makedirs(directory, exist_ok=True)
