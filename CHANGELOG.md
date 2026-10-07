@@ -9,6 +9,11 @@ becomes the new version (see `RELEASING.md`).
 
 ## [Unreleased]
 
+### Fixed
+- `authcat ou`: the decay plot's log axes read 0.01, 0.1, 1, 10 instead of
+  powers of ten, whose minus sign (as in 10⁻¹) Tw Cen MT lacks; matplotlib
+  warned about the missing glyph and drew a box in its place.
+
 ## [0.1.5] - 2026-10-07
 
 ### Added
