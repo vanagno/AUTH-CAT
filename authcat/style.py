@@ -8,7 +8,7 @@ import os
 from functools import lru_cache
 
 FONT_FAMILY = os.environ.get("AUTHCAT_FONT") or "Tw Cen MT"
-FONT_SIZE = 13          # figure text, points (matplotlib's default is 10)
+FONT_SIZE = 16          # figure text, points 
 FIGURE_DPI = 300        # resolution of the saved figures
 #: Mc with a subscript c, for figure labels (matplotlib mathtext).
 MC = r"M$_\mathrm{c}$"
