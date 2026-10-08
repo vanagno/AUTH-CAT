@@ -9,6 +9,12 @@ becomes the new version (see `RELEASING.md`).
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-10-08
+
+### Changed
+- `authcat mct`: the dates under the plot are tilted, as in `authcat mt`, so
+  that they do not overlap with the larger figure text.
+
 ### Fixed
 - `authcat cat`: an event whose origin time is given with its uncertainty
   (e.g. `11:29:52.756   +/-    0.378 s`) was left out of the catalogues as
@@ -137,7 +143,8 @@ First release on PyPI (`pip install authcat`).
 - `authcat vpvs`: the Wadati diagram is saved, as reported.
 - Compatibility with pandas 3.
 
-[Unreleased]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.1...v0.1.5
 [0.1.1]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.0...v0.1.1

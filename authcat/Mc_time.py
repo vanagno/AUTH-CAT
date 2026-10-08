@@ -34,6 +34,7 @@ def plot_mc(times, mc_values, filtered_mc_values, output_file):
     plt.ylabel('Magnitude of Completeness (MAXC)')
     plt.legend()
     plt.grid(False)
+    plt.gcf().autofmt_xdate()  # tilted dates, as in M_time.png, so they do not overlap
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     watermark()
     plt.savefig(output_file)     
