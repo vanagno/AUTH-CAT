@@ -9,6 +9,10 @@ becomes the new version (see `RELEASING.md`).
 
 ## [Unreleased]
 
+### Changed
+- `authcat mct`: the dates under the plot are tilted, as in `authcat mt`, so
+  that they do not overlap with the larger figure text.
+
 ### Fixed
 - `authcat cat`: an event whose origin time is given with its uncertainty
   (e.g. `11:29:52.756   +/-    0.378 s`) was left out of the catalogues as
