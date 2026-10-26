@@ -29,7 +29,7 @@ one::
 
     authcat project Arkal --bulletin Arkal.bul
 
-With no arguments (``authcat project``) it lists the projects. Standard library only.
+With no arguments (``authcat project``) it lists the projects. 
 """
 
 from __future__ import annotations

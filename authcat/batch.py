@@ -5,7 +5,7 @@
 project NAME, one after the other, without asking anything: each step gets
 the answers it would ask for (the project's own files, and the parameters
 given as options below), and its figures are saved without being shown. The
-project must exist already; start it with ``authcat bul`` or
+project must exist already so one should first start it with ``authcat bul`` or
 ``authcat project``.
 
 Usage

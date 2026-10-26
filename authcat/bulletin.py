@@ -19,7 +19,7 @@ name and creates Projects/<name>/ (see project.py), puts the bulletin in its Inp
 starts the project record, Projects/<name>/<name>.json. Every later script
 works inside that project.
 
-Standard library only (Python 3.8+).
+
 """
 
 import argparse

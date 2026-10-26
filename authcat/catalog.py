@@ -3,9 +3,7 @@
 
 
 The bulletin is read once into ``Event`` objects and three formats (full catalogue, 6-column and quakeml) are
-written from that, so the outputs cannot disagree with each other -- the old
-pair could, because ``transform.py`` re-parsed ``bul.py``'s text output and
-rounded a second time.
+written from that, so the outputs cannot disagree with each other
 
 QuakeML 1.2 (``write_quakeml``) carries the whole bulletin information, like
 origins with their uncertainties, both network magnitudes, every phase pick 
@@ -17,8 +15,8 @@ and largest event are recorded in the project record (see ``project.py``).
 
 Usage
 -----
-    authcat cat                                        # interactive, as before
-    authcat cat -p Arkal -f all                        # the project's own bulletin
+    authcat cat                                         
+    authcat cat -p Arkal -f all                       
     authcat cat -p Arkal -i other.bul -f quakeml --no-picks
 """
 
@@ -136,13 +134,7 @@ class Event:
     station_magnitudes: list[StationMagnitude] = field(default_factory=list)
 
     def magnitude(self, prefer: str = "MLh") -> NetworkMagnitude | None:
-        """The magnitude the text catalogues report.
 
-        ``bul.py`` took the ``MLh`` line specifically, so that is the default
-        and keeps the output byte-identical. Where there is no MLh it falls
-        back to whichever magnitude the bulletin marks preferred, then to the
-        first one -- ``bul.py`` raised ``KeyError`` in that case.
-        """
         for m in self.magnitudes:
             if m.type == prefer:
                 return m
@@ -391,15 +383,7 @@ def _parse_stamag(line: str) -> StationMagnitude | None:
 
 
 def read_bulletin(path: str | os.PathLike) -> tuple[list[Event], ReadReport]:
-    """Read a bulletin into ``Event`` objects.
 
-    Parsing is driven by which section of the block the line falls in, rather
-    than by testing every line against every label. That matters because
-    ``Public ID`` and ``Creation time`` each appear twice per event -- once
-    for the event, once for the origin -- and ``bul.py``'s flat chain of
-    ``elif`` tests had to carry a one-shot flag to tell the two ``Public ID``
-    lines apart.
-    """
     rep = ReadReport()
     events: list[Event] = []
     text = Path(path).read_text(errors="replace")
@@ -413,7 +397,7 @@ def read_bulletin(path: str | os.PathLike) -> tuple[list[Event], ReadReport]:
             blocks[-1].append(line)
 
     for blk in blocks:
-        # Every event in the Tyrnavos bulletin has exactly one Origin block,
+        # Every event  has exactly one Origin block,
         # and it is always the one named by Preferred Origin ID. Should a
         # bulletin ever carry a second -- an original solution kept beside a
         # relocated one -- read the preferred one rather than letting the
@@ -605,7 +589,7 @@ def read_bulletin(path: str | os.PathLike) -> tuple[list[Event], ReadReport]:
 def write_classic(
     events: Sequence[Event], path: str | os.PathLike
 ) -> WriteReport:
-    """Write the 11-column catalogue, as ``bul.py`` did.
+    """Write the 11-column catalogue
 
     Note on the column headed ``Nsta``: it holds the number of phase
     arrivals, not the number of stations. The two differ in all but 22 of the
@@ -660,22 +644,6 @@ def write_sixcol(
 ) -> WriteReport:
     """Write the 6-column analyst format.
 
-    ``transform.py`` built the centiseconds as
-    ``f"{int(round(float('0.' + ms) * 100)):02}"``, which cannot carry: an
-    origin at ``12:02:36.996`` became ``120236.100``. That is wrong twice
-    over -- the value should be ``120237.00``, and the field is one character
-    wider than the fixed-width layout allows, so every column after it
-    shifts. Six of the 1752 Tyrnavos events hit it.
-
-    This writer rounds through ``datetime``, so a carry rolls the second, the
-    minute and if need be the day. ``legacy=True`` reproduces the old output
-    byte for byte, including those six lines, which is what the regression
-    test compares against.
-
-    The magnitude is also rounded once here, from the bulletin value, rather
-    than twice as the old pair did (bulletin -> 2 decimals in the text
-    catalogue -> 1 decimal here). ``legacy=True`` restores the double
-    rounding too.
     """
     rep = WriteReport(path=str(path))
     lines = []
@@ -795,9 +763,7 @@ def write_quakeml(
     ==========================  ===================================================
 
     The ``X`` flag needs its own element rather than being inferred from the
-    weight: in the Tyrnavos bulletin the lowest weight on an unflagged pick is
-    0.1, which is also a weight X-flagged picks carry, so the flag is not
-    recoverable from the weight alone.
+    weight: 
 
     ``picks=False`` writes origins and network magnitudes only -- no picks,
     arrivals, station magnitudes or amplitudes. That is about a tenth of the

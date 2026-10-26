@@ -10,11 +10,9 @@ publish, and keeps the previous list as Utilities/regd.sta.bak:
   lat 33.5 to 43.5, lon 18 to 31, unless --region gives another -- that is
   missing from the list is added.
 
-Nothing is removed: a listed station the services do not hold keeps its line.
 
-Coordinates come from the FDSN station services, the standard way seismic
-networks publish their metadata:
 
+Coordinates come from the FDSN station services
 * every EIDA data centre -- NOA for the Greek networks (HL, HT, HP, HA, HC,
   HI), KOERI for the Turkish, RESIF, GFZ, INGV and the rest -- found through
   the EIDA routing service (ORFEUS, or GFZ as a backup);
@@ -25,7 +23,7 @@ and NOA are asked instead.
 
 The list holds station codes only, while the services name each station by
 network and code, and the same code can be used by more than one network.
-Permanent networks are preferred to temporary ones; among stations of the
+Permanent networks are preferred to temporary ones. among stations of the
 same code at different places, a listed station takes the one nearest its
 listed position, and a new one the most recent. A position more than FAR_KM
 from the listed one is more likely another station with the same code than
@@ -38,7 +36,7 @@ Usage
     authcat stup --dry-run                  # show what would change, write nothing
     authcat stup --region 34 42 19 30       # add the missing stations of another area
 
-Standard library only.
+
 """
 
 from __future__ import annotations

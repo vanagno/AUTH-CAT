@@ -321,9 +321,8 @@ def write_hypodd(
         run to 11 737 across 11 699 events. ``True`` renumbers from 1.
     pad_time
         ``True`` (default) writes hour and minute zero-padded to two digits, so
-        midnight reads ``00 00``. ``False`` writes them bare (``0 0``), which is
-        what homeros_catalog_ionio24.txt does -- pass it to reproduce that file
-        byte for byte. The header is read list-directed by ``ph2dt``, so both
+        midnight reads ``00 00``. ``False`` writes them bare (``0 0``)
+         The header is read list-directed by ``ph2dt``, so both
         parse identically; this only affects how the file looks.
     """
     path = Path(path)
@@ -417,7 +416,7 @@ def read_hypodd(path: str | Path) -> list[Event]:
 
 
 # --------------------------------------------------------------------------- #
-# Writing the original HYPO71-style output
+# Writing the  HYPO71 format output
 # --------------------------------------------------------------------------- #
 def write_hypo71(events: list[Event], path: str | Path) -> WriteReport:
 

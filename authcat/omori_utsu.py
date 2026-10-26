@@ -23,9 +23,7 @@ Workflow
       Results/Omori_fit_data.txt
    and record the fit in the project record.
 
-Required additional packages:
-    emcee
-    corner
+
 """
 
 from __future__ import annotations
@@ -72,7 +70,7 @@ META = {
 
 
 # -----------------------------------------------------------------------------
-# Omori-Utsu (modified Omori) law and its Bayesian likelihood (formerly omori_utils.py)
+# Omori-Utsu (modified Omori) law and its Bayesian likelihood 
 # -----------------------------------------------------------------------------
 
 

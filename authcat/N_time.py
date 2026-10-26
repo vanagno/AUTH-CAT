@@ -14,10 +14,6 @@ COLUMNS = ['Year', 'Stamp', 'Latitude', 'Longitude', 'Depth', 'Magnitude']
 def read_sixcol(file_path):
     """Read a 6-column catalogue and return it in chronological order.
 
-    The timestamp column is kept as text. Read as a number it loses any
-    trailing zero in the centiseconds -- 0303082752.90 comes back as
-    303082752.9 -- and padding that back to 13 characters shifts every
-    field, so the month reads 00 and the row is lost.
     """
     df = pd.read_csv(file_path, sep=r"\s+", header=None, names=COLUMNS,
                      dtype={'Year': str, 'Stamp': str})
