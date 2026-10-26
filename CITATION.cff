@@ -4,8 +4,8 @@ title: >-
   Earthquake Bulletins from the Aristotle University of
   Thessaloniki Seismological Station
 message: >-
-  If you use AUTH-CAT in a publication, please cite both the
-  software and the methods paper.
+  If you use AUTH-CAT in a publication, please cite its user
+  manual, given below as the preferred citation.
 type: software
 authors:
   - given-names: Pavlos
@@ -25,5 +25,23 @@ repository-code: 'https://github.com/vanagno/AUTH-CAT'
 keywords:
   - Seismology
 license: GPL-3.0+
-version: 0.1.7
-date-released: '2026-10-08'
+version: 0.1.8
+date-released: '2026-10-26'
+preferred-citation:
+  type: manual
+  title: >-
+    AUTH-CAT: A Python Package for Exploring and Analyzing
+    Earthquake Bulletins from the Aristotle University of
+    Thessaloniki Seismological Station – User Manual
+  authors:
+    - given-names: Pavlos
+      family-names: Bonatis
+      orcid: 'https://orcid.org/0000-0002-4742-9352'
+    - given-names: Vasilis
+      family-names: Anagnostou
+      orcid: 'https://orcid.org/0009-0007-9303-8399'
+  year: 2026
+  publisher:
+    name: Zenodo
+  doi: 10.5281/zenodo.23662171
+  url: 'https://doi.org/10.5281/zenodo.23662171'

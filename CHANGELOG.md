@@ -9,6 +9,19 @@ becomes the new version (see `RELEASING.md`).
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-10-26
+
+### Added
+- The user manual, archived on Zenodo
+  (https://doi.org/10.5281/zenodo.23662171), with a copy in the repository
+  (`AUTH-CAT_MANUAL.pdf`). The README links to it, and `CITATION.cff` gives
+  it as the preferred citation, so GitHub's *Cite this repository* cites the
+  manual.
+
+### Changed
+- The scripts' comments and docstrings no longer describe the old scripts
+  they replaced; no change in behaviour.
+
 ## [0.1.7] - 2026-10-08
 
 ### Changed
@@ -143,7 +156,8 @@ First release on PyPI (`pip install authcat`).
 - `authcat vpvs`: the Wadati diagram is saved, as reported.
 - Compatibility with pandas 3.
 
-[Unreleased]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/vanagno/AUTH-CAT/compare/v0.1.1...v0.1.5

@@ -11,7 +11,7 @@ Reads either format written by ``phases.py`` and writes the same format back:
 The format is detected from the file, so the same answer to the same prompt
 works for both. Phase counts per station are computed from the file being
 filtered, which is what makes them consistent with the cut you are about to
-make. coordinates are extracted from ``station_phases_counts.txt`` in the same
+make. Coordinates are extracted from ``station_phases_counts.txt`` in the same
 folder (written by ``stations.py``) when it is present. Both files live in the
 project's Results folder (see ``project.py``).
 

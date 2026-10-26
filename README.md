@@ -1,7 +1,22 @@
 # AUTH-CAT
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23662171.svg)](https://doi.org/10.5281/zenodo.23662171)
+
 A Python toolkit for exploring and analysing earthquake bulletins from the
 Seismological Station of the Aristotle University of Thessaloniki (AUTH-SS).
+
+The user manual covers installation, every command and a step-by-step
+example (the 2021 Arkalochori sequence, Crete). It is archived on Zenodo:
+https://doi.org/10.5281/zenodo.23662171
+
+## How to cite
+
+If you use AUTH-CAT, please cite its manual:
+
+> Bonatis, P., & Anagnostou, V. (2026). AUTH-CAT: A Python Package for
+> Exploring and Analyzing Earthquake Bulletins from the Aristotle University
+> of Thessaloniki Seismological Station – User Manual. Zenodo.
+> https://doi.org/10.5281/zenodo.23662171
 
 ## Installation
 
