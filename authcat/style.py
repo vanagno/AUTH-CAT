@@ -33,7 +33,7 @@ def font_files() -> dict[str, str]:
             continue
         props = font_manager.FontProperties(fname=path)
         if props.get_name() != FONT_FAMILY or path in found.values():
-            continue  #
+            continue  # another font, or the same file standing in for a missing variant
         found[key] = path
     return found if "regular" in found else {}
 

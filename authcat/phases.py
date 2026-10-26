@@ -321,8 +321,8 @@ def write_hypodd(
         run to 11 737 across 11 699 events. ``True`` renumbers from 1.
     pad_time
         ``True`` (default) writes hour and minute zero-padded to two digits, so
-        midnight reads ``00 00``. ``False`` writes them bare (``0 0``)
-         The header is read list-directed by ``ph2dt``, so both
+        midnight reads ``00 00``. ``False`` writes them bare (``0 0``).
+        The header is read list-directed by ``ph2dt``, so both
         parse identically; this only affects how the file looks.
     """
     path = Path(path)

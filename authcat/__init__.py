@@ -6,4 +6,4 @@ Each step of the workflow is a sub-command of the ``authcat`` command (see
 ``authcat.project``).
 """
 
-__version__ = "0.1.7"
+__version__ = "0.1.8"
